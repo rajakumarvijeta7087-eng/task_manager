@@ -1,0 +1,485 @@
+{% extends 'dashboards/base.html' %}
+{% block title %}Project Lead Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 999;
+    backdrop-filter: blur(4px);
+    align-items: center;
+    justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal-box {
+    background: var(--surface);
+    border-radius: var(--radius);
+    width: 90%;
+    max-width: 560px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-lg);
+    animation: modalIn 0.25s ease;
+}
+@keyframes modalIn {
+    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.modal-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.modal-title { font-size: 15px; font-weight: 700; }
+.modal-close {
+    width: 32px; height: 32px;
+    border: none;
+    background: var(--surface2);
+    border-radius: var(--radius-xs);
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    transition: all 0.15s;
+}
+.modal-close:hover { background: var(--error-light); color: var(--error); }
+.modal-body { padding: 20px 24px; }
+.modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+.form-group { margin-bottom: 16px; }
+.form-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+.form-input, .form-select, .form-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-xs);
+    font-family: var(--font);
+    font-size: 13px;
+    background: var(--surface);
+    color: var(--text);
+    transition: border-color 0.15s;
+    outline: none;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); }
+.form-textarea { resize: vertical; min-height: 80px; }
+.btn { padding: 10px 20px; border: none; border-radius: var(--radius-xs); font-family: var(--font); font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-secondary { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--border); }
+
+.assign-type-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    background: var(--surface2);
+    padding: 4px;
+    border-radius: var(--radius-sm);
+}
+.assign-type-tab {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    background: none;
+    border-radius: var(--radius-xs);
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.15s;
+}
+.assign-type-tab.active {
+    background: var(--surface);
+    color: var(--accent);
+    box-shadow: var(--shadow-sm);
+}
+
+.people-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 0;
+}
+.person-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+}
+.person-avatar-sm {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 11px;
+    color: #fff;
+    flex-shrink: 0;
+}
+.person-avatar-sm.qr { background: linear-gradient(135deg, #8b5cf6, #ec4899); }
+.person-avatar-sm.tasker { background: linear-gradient(135deg, #22c55e, #14b8a6); }
+.person-name { font-weight: 600; color: var(--text); }
+.person-role-tag { font-size: 10px; color: var(--text-muted); }
+
+.assign-fab {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    width: 54px; height: 54px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(79,110,247,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    z-index: 100;
+}
+.assign-fab:hover { background: var(--accent-hover); transform: scale(1.08); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+
+    <div class="dashboard-header">
+        <div class="header-left">
+            <span class="role-chip">🎯 Project Lead</span>
+            <h1 class="dash-title">Welcome back, <strong>{{ user.username }}</strong></h1>
+            <p class="dash-subtitle">{{ user.job_title or 'Project Lead' }} &mdash; Here's your project overview</p>
+        </div>
+        <div class="header-right">
+            <a href="{{ url_for('users.profile') }}" class="avatar-circle" title="View Profile" style="text-decoration:none;cursor:pointer;">{{ user.username[0].upper() }}</a>
+        </div>
+    </div>
+
+    {% if dashboard.qr_list or dashboard.tasker_list %}
+    <div class="dash-card" style="margin-bottom:20px;">
+        <div class="card-header"><span class="card-title">Your Team</span></div>
+        <div class="card-body">
+            {% if dashboard.qr_list %}
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:8px;">Quality Reviewers</div>
+            <div class="people-row" style="margin-bottom:16px;">
+                {% for qr in dashboard.qr_list %}
+                <div class="person-chip">
+                    <div class="person-avatar-sm qr">{{ qr.username[0].upper() }}</div>
+                    <div>
+                        <div class="person-name">{{ qr.username }}</div>
+                        <div class="person-role-tag">🔍 {{ qr.job_title or 'Quality Reviewer' }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% if dashboard.tasker_list %}
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:8px;">Taskers</div>
+            <div class="people-row">
+                {% for t in dashboard.tasker_list %}
+                <div class="person-chip">
+                    <div class="person-avatar-sm tasker">{{ t.username[0].upper() }}</div>
+                    <div>
+                        <div class="person-name">{{ t.username }}</div>
+                        <div class="person-role-tag">⚡ {{ t.job_title or 'Tasker' }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">📁</div>
+            <div class="stat-body">
+                <div class="stat-value">{{ dashboard.total_projects or 0 }}</div>
+                <div class="stat-label">Total Projects</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">✅</div>
+            <div class="stat-body">
+                <div class="stat-value">{{ dashboard.completed_tasks or 0 }}</div>
+                <div class="stat-label">Completed Tasks</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">⏳</div>
+            <div class="stat-body">
+                <div class="stat-value">{{ dashboard.pending_tasks or 0 }}</div>
+                <div class="stat-label">Pending Tasks</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-body">
+                <div class="stat-value">{{ dashboard.team_members or 0 }}</div>
+                <div class="stat-label">Team Members</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="dash-grid-2col">
+        <div class="dash-card">
+            <div class="card-header">
+                <span class="card-title">Active Projects</span>
+            </div>
+            <div class="card-body">
+                {% if dashboard.active_projects %}
+                    {% for project in dashboard.active_projects %}
+                    <div class="project-row">
+                        <div class="project-info">
+                            <div class="project-name">{{ project.name }}</div>
+                            <div class="project-meta">{{ project.task_count }} tasks &bull; Due {{ project.due_date or 'N/A' }}</div>
+                        </div>
+                        <div class="progress-wrap">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: {{ project.progress or 0 }}%"></div>
+                            </div>
+                            <span class="progress-pct">{{ project.progress or 0 }}%</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">No active projects yet.</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="dash-card">
+            <div class="card-header">
+                <span class="card-title">Recent Activity</span>
+            </div>
+            <div class="card-body">
+                {% if dashboard.recent_activity %}
+                    {% for item in dashboard.recent_activity %}
+                    <div class="activity-row">
+                        <div class="activity-dot {{ item.type }}"></div>
+                        <div class="activity-text">
+                            <span class="activity-msg">{{ item.message }}</span>
+                            <span class="activity-time">{{ item.time }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">No recent activity.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="dash-card" style="margin-top: 20px;">
+        <div class="card-header">
+            <span class="card-title">Task Overview</span>
+        </div>
+        <div class="card-body">
+            {% if dashboard.tasks %}
+            <table class="dash-table">
+                <thead>
+                    <tr>
+                        <th>Task</th>
+                        <th>Assignee</th>
+                        <th>Priority</th>
+                        <th>Status</th>
+                        <th>Due Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in dashboard.tasks %}
+                    <tr>
+                        <td style="font-weight:600;">{{ task.title }}</td>
+                        <td>{{ task.assignee or '—' }}</td>
+                        <td><span class="badge priority-{{ task.priority | lower }}">{{ task.priority }}</span></td>
+                        <td><span class="badge status-{{ task.status | lower | replace(' ', '-') }}">{{ task.status }}</span></td>
+                        <td>{{ task.due_date or '—' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+                <div class="empty-state">No tasks found.</div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+<button class="assign-fab" onclick="openAssignModal()" title="Assign Task">
+    <i class="fas fa-plus"></i>
+</button>
+
+<div class="modal-overlay" id="assignModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <span class="modal-title">📋 Assign New Task</span>
+            <button class="modal-close" onclick="closeAssignModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="assign-type-tabs">
+                <button class="assign-type-tab active" id="tabQR" onclick="switchAssignType('qr')">🔍 Assign to QR</button>
+                <button class="assign-type-tab" id="tabTasker" onclick="switchAssignType('tasker')">⚡ Assign to Tasker</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Task Title</label>
+                <input type="text" class="form-input" id="assignTitle" placeholder="Enter task title">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea class="form-textarea" id="assignDesc" placeholder="Task description..."></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label" id="assignToLabel">Assign To (Quality Reviewer)</label>
+                <select class="form-select" id="assignTo">
+                    <option value="">Select...</option>
+                    {% for qr in dashboard.qr_list %}
+                    <option value="{{ qr.id }}" data-type="qr">{{ qr.username }} — {{ qr.job_title or 'QR' }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div class="form-group">
+                    <label class="form-label">Priority</label>
+                    <select class="form-select" id="assignPriority">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                        <option value="critical">Critical</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Due Date</label>
+                    <input type="date" class="form-input" id="assignDue">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Project (optional)</label>
+                <select class="form-select" id="assignProject">
+                    <option value="">No project</option>
+                    {% for project in dashboard.active_projects %}
+                    <option value="{{ project.id }}">{{ project.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeAssignModal()">Cancel</button>
+            <button class="btn btn-primary" id="btnAssign" onclick="submitAssign()">
+                <i class="fas fa-paper-plane" style="margin-right:6px;"></i>Assign Task
+            </button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const qrOptions = [
+    {% for qr in dashboard.qr_list %}
+    {id: {{ qr.id }}, name: "{{ qr.username|e }} — {{ (qr.job_title or 'QR')|e }}"},
+    {% endfor %}
+];
+const taskerOptions = [
+    {% for t in dashboard.tasker_list %}
+    {id: {{ t.id }}, name: "{{ t.username|e }} — {{ (t.job_title or 'Tasker')|e }}"},
+    {% endfor %}
+];
+
+let currentAssignType = 'qr';
+
+function switchAssignType(type) {
+    currentAssignType = type;
+    document.getElementById('tabQR').classList.toggle('active', type === 'qr');
+    document.getElementById('tabTasker').classList.toggle('active', type === 'tasker');
+    const select = document.getElementById('assignTo');
+    const label = document.getElementById('assignToLabel');
+    select.innerHTML = '<option value="">Select...</option>';
+    const options = type === 'qr' ? qrOptions : taskerOptions;
+    label.textContent = type === 'qr' ? 'Assign To (Quality Reviewer)' : 'Assign To (Tasker)';
+    options.forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o.id;
+        opt.textContent = o.name;
+        select.appendChild(opt);
+    });
+}
+
+function openAssignModal() {
+    document.getElementById('assignModal').classList.add('show');
+    switchAssignType('qr');
+}
+function closeAssignModal() {
+    document.getElementById('assignModal').classList.remove('show');
+}
+
+async function submitAssign() {
+    const title = document.getElementById('assignTitle').value.trim();
+    const desc = document.getElementById('assignDesc').value.trim();
+    const assignedTo = document.getElementById('assignTo').value;
+    const priority = document.getElementById('assignPriority').value;
+    const due = document.getElementById('assignDue').value;
+    const projectId = document.getElementById('assignProject').value;
+    if (!title) { alert('Task title is required.'); return; }
+    if (!assignedTo) { alert('Please select an assignee.'); return; }
+    const btn = document.getElementById('btnAssign');
+    btn.disabled = true;
+    btn.textContent = 'Assigning...';
+    try {
+        const res = await csrfFetch('/api/task/assign', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                title, description: desc,
+                assigned_to: parseInt(assignedTo),
+                priority, due_date: due || null,
+                project_id: projectId ? parseInt(projectId) : null
+            })
+        });
+        const data = await res.json();
+        if (data.status === 'ok') {
+            closeAssignModal();
+            location.reload();
+        } else {
+            alert('Failed to assign task.');
+        }
+    } catch(e) { alert('Network error.'); }
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:6px;"></i>Assign Task';
+}
+
+document.getElementById('assignModal').addEventListener('click', function(e) {
+    if (e.target === this) closeAssignModal();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,352 @@
+{% extends 'dashboards/base.html' %}
+{% block title %}Profile{% endblock %}
+{% block breadcrumb %}Profile{% endblock %}
+
+{% block extra_css %}
+<style>
+.profile-wrapper {
+    max-width: 760px;
+    margin: 0 auto;
+}
+.profile-hero {
+    background: linear-gradient(135deg, #1a1d2e 0%, #2d3155 100%);
+    border-radius: var(--radius);
+    padding: 32px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    overflow: hidden;
+}
+.profile-hero::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 200px; height: 200px;
+    background: rgba(79,110,247,0.1);
+    border-radius: 50%;
+}
+.profile-avatar-lg {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), #7c3aed);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    font-weight: 800;
+    color: #fff;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 4px rgba(255,255,255,0.1);
+}
+.profile-hero-info { flex: 1; }
+.profile-hero-name {
+    font-size: 22px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+}
+.profile-hero-role {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 4px;
+}
+.profile-hero-email {
+    font-size: 13px;
+    color: rgba(255,255,255,0.45);
+    margin-top: 6px;
+}
+.profile-stats {
+    display: flex;
+    gap: 24px;
+    flex-shrink: 0;
+}
+.profile-stat {
+    text-align: center;
+}
+.profile-stat-value {
+    font-size: 22px;
+    font-weight: 800;
+    color: #fff;
+    font-family: var(--font-mono);
+}
+.profile-stat-label {
+    font-size: 10px;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 2px;
+}
+
+.profile-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow-sm);
+}
+.profile-card-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.profile-card-body { padding: 24px; }
+
+.form-group { margin-bottom: 20px; }
+.form-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+.form-input {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-xs);
+    font-family: var(--font);
+    font-size: 13px;
+    background: var(--surface);
+    color: var(--text);
+    transition: border-color 0.15s;
+    outline: none;
+}
+.form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,110,247,0.08); }
+.form-input:disabled { background: var(--surface2); color: var(--text-muted); cursor: not-allowed; }
+.form-hint { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+
+.btn { padding: 11px 22px; border: none; border-radius: var(--radius-xs); font-family: var(--font); font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.15s; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.toast {
+    position: fixed;
+    top: 24px; right: 24px;
+    padding: 14px 20px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: var(--shadow-lg);
+    animation: slideIn 0.3s ease;
+    max-width: 360px;
+}
+.toast-success { background: var(--success-light); color: #15803d; border: 1px solid #bbf7d0; }
+.toast-error { background: var(--error-light); color: #dc2626; border: 1px solid #fecaca; }
+@keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+.member-since {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 20px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.45);
+    margin-top: 8px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-wrapper">
+
+    <div class="profile-hero">
+        <div class="profile-avatar-lg">{{ user.username[0].upper() }}</div>
+        <div class="profile-hero-info">
+            <div class="profile-hero-name">{{ user.username }}</div>
+            <div class="profile-hero-role">
+                {% if user.role == 'project_lead' %}🎯 Project Lead
+                {% elif user.role == 'quality_reviewer' %}🔍 Quality Reviewer
+                {% elif user.role == 'tasker' %}⚡ Tasker
+                {% else %}{{ user.role }}{% endif %}
+            </div>
+            <div class="profile-hero-email">{{ user.email }}</div>
+            {% if profile and profile.created_at %}
+            <div class="member-since"><i class="fas fa-calendar-alt"></i> Member since {{ profile.created_at }}</div>
+            {% endif %}
+        </div>
+        {% if profile %}
+        <div class="profile-stats">
+            <div class="profile-stat">
+                <div class="profile-stat-value">{{ profile.total_tasks or 0 }}</div>
+                <div class="profile-stat-label">Tasks</div>
+            </div>
+            <div class="profile-stat">
+                <div class="profile-stat-value">{{ profile.completed_tasks or 0 }}</div>
+                <div class="profile-stat-label">Completed</div>
+            </div>
+            <div class="profile-stat">
+                <div class="profile-stat-value">{{ profile.total_hours or '0h' }}</div>
+                <div class="profile-stat-label">Hours</div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="profile-card">
+        <div class="profile-card-header">
+            <i class="fas fa-user-pen" style="color:var(--accent);"></i> Edit Profile
+        </div>
+        <div class="profile-card-body">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" class="form-input" id="profileUsername" value="{{ user.username }}" placeholder="Your username">
+                    <div class="form-hint">Must be at least 3 characters</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Job Title</label>
+                    <input type="text" class="form-input" id="profileJobTitle" value="{{ user.job_title or '' }}" placeholder="e.g. Senior Developer">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-input" value="{{ user.email }}" disabled>
+                <div class="form-hint">Email cannot be changed</div>
+            </div>
+            <button class="btn btn-primary" id="btnSaveProfile" onclick="saveProfile()">
+                <i class="fas fa-save" style="margin-right:6px;"></i>Save Changes
+            </button>
+        </div>
+    </div>
+
+    <div class="profile-card">
+        <div class="profile-card-header">
+            <i class="fas fa-lock" style="color:var(--warning);"></i> Change Password
+        </div>
+        <div class="profile-card-body">
+            <div class="form-group">
+                <label class="form-label">Current Password</label>
+                <input type="password" class="form-input" id="currentPassword" placeholder="Enter current password">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <div class="form-group">
+                    <label class="form-label">New Password</label>
+                    <input type="password" class="form-input" id="newPassword" placeholder="New password">
+                    <div class="form-hint">Min 8 characters</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Confirm New Password</label>
+                    <input type="password" class="form-input" id="confirmPassword" placeholder="Confirm new password">
+                </div>
+            </div>
+            <button class="btn btn-primary" id="btnChangePassword" onclick="changePassword()">
+                <i class="fas fa-key" style="margin-right:6px;"></i>Update Password
+            </button>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showToast(message, type = 'success') {
+    const existing = document.querySelector('.toast');
+    if (existing) existing.remove();
+    const toast = document.createElement('div');
+    toast.className = 'toast toast-' + type;
+    toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-circle-check' : 'fa-circle-xmark'}"></i> ${message}`;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.transition = 'opacity 0.4s';
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 400);
+    }, 3500);
+}
+
+async function saveProfile() {
+    const username = document.getElementById('profileUsername').value.trim();
+    const jobTitle = document.getElementById('profileJobTitle').value.trim();
+    if (!username || username.length < 3) {
+        showToast('Username must be at least 3 characters', 'error');
+        return;
+    }
+    const btn = document.getElementById('btnSaveProfile');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    try {
+        const res = await fetch('/api/profile/update', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username, job_title: jobTitle})
+        });
+        const data = await res.json();
+        if (data.status === 'ok') {
+            showToast('Profile updated successfully!', 'success');
+            setTimeout(() => location.reload(), 1200);
+        } else {
+            showToast(data.error || 'Update failed', 'error');
+        }
+    } catch(e) {
+        showToast('Network error', 'error');
+    }
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-save" style="margin-right:6px;"></i>Save Changes';
+}
+
+async function changePassword() {
+    const current = document.getElementById('currentPassword').value;
+    const newPw = document.getElementById('newPassword').value;
+    const confirm = document.getElementById('confirmPassword').value;
+    if (!current || !newPw || !confirm) {
+        showToast('All password fields are required', 'error');
+        return;
+    }
+    if (newPw !== confirm) {
+        showToast('New passwords do not match', 'error');
+        return;
+    }
+    if (newPw.length < 8) {
+        showToast('Password must be at least 8 characters', 'error');
+        return;
+    }
+    const btn = document.getElementById('btnChangePassword');
+    btn.disabled = true;
+    btn.textContent = 'Updating...';
+    try {
+        const username = document.getElementById('profileUsername').value.trim();
+        const jobTitle = document.getElementById('profileJobTitle').value.trim();
+        const res = await fetch('/api/profile/update', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username, job_title: jobTitle, current_password: current, new_password: newPw})
+        });
+        const data = await res.json();
+        if (data.status === 'ok') {
+            showToast('Password updated successfully!', 'success');
+            document.getElementById('currentPassword').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+        } else {
+            showToast(data.error || 'Password update failed', 'error');
+        }
+    } catch(e) {
+        showToast('Network error', 'error');
+    }
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-key" style="margin-right:6px;"></i>Update Password';
+}
+</script>
+{% endblock %}
