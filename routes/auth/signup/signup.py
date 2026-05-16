@@ -5,12 +5,15 @@ from routes.auth.utils.utils_signup import (
     generate_otp, validate_otp, send_signup_email_otp, send_signup_success_email, generate_user_code
 )
 from routes.auth.database.auth_db import AuthOperation
+from routes.dashboards.index_db import UserOperation
 import time
 import bcrypt
 import logging
 from routes import users_bp
 
 auth_db = AuthOperation()
+signup_db_helper = UserOperation() # <-- Renamed to fix variable pollution collision
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -92,14 +95,12 @@ def user_signup():
                 email = request.form.get('email', '').strip().lower()
                 job_title = request.form.get('job_title', '').strip()
 
-                from routes.dashboards.databases.index_db import UserOperation
-                db_op = UserOperation()
-                wl_mode = db_op.get_setting('whitelist_mode')
-                if wl_mode == 'on' and not db_op.is_email_whitelisted(email):
+                wl_mode = signup_db_helper.get_setting('whitelist_mode')
+                if wl_mode == 'on' and not signup_db_helper.is_email_whitelisted(email):
                     flash("Your email is not authorized by the admin.", 'error')
                     return redirect(url_for('users.user_signup'))
 
-                allowed_domains = db_op.get_setting('allowed_domains')
+                allowed_domains = signup_db_helper.get_setting('allowed_domains')
                 if allowed_domains:
                     domain_list = [d.strip().lower() for d in allowed_domains.split(',')]
                     user_domain = email.split('@')[-1]
@@ -173,17 +174,27 @@ def user_email_otp_verify():
                     qr_user = auth_db.get_user_by_id(signup_data['user_signup_assigned_qr'])
                     if qr_user: qr_name = qr_user['username']
                 
+                new_user_row = auth_db.get_user_by_email(signup_data['user_signup_email'])
                 dashboard_url = url_for(f"users.dashboard_{signup_data['user_signup_role']}", user_code=user_code, _external=True)
                 send_signup_success_email(signup_data['user_signup_username'], signup_data['user_signup_email'], signup_data['user_signup_role'], pl_name, qr_name, user_code, dashboard_url, mail)
-                session.update({'user_username': signup_data['user_signup_username'], 'user_email': signup_data['user_signup_email'], 'user_role': signup_data['user_signup_role'], 'user_code': user_code})
+                
+                session.clear()
+                session.update({
+                    'user_username': new_user_row['username'], 
+                    'user_email': new_user_row['email'], 
+                    'user_role': new_user_row['role'], 
+                    'user_code': user_code
+                })
+                
                 next_url = session.pop('user_login_next_url', None)
                 clear_signup_session()
                 flash("Signup successful!", 'success')
-                return redirect(next_url or _get_role_dashboard(signup_data['user_signup_role'], user_code))
+                return redirect(next_url or _get_role_dashboard(new_user_row['role'], user_code))
             else:
                 flash(msg, 'error')
         return render_template("auth/user_signup.html", step='otp', signup_data=signup_data)
-    except Exception:
+    except Exception as e:
+        logger.error(f"Signup Verification Failure: {e}")
         return render_template("auth/error.html", error_message="Verification Error.")
 
 @users_bp.route("/user_resend_otp", methods=['POST'])

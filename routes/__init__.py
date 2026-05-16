@@ -12,4 +12,4 @@ from .auth.signup import signup
 from .auth.forgot_password import forgot
 
 
-from .dashboards.index import index
+from .dashboards import index

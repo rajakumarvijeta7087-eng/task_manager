@@ -1,14 +1,15 @@
 import os
 from flask import flash, jsonify, redirect, render_template, request, session, url_for
-from routes.dashboards.databases.index_db import UserOperation as EnrollUserOperation
+from routes.dashboards.index_db import UserOperation as EnrollUserOperation
 from routes.auth.database.auth_db import AuthOperation
 from extensions import mail
 from flask_mail import Message
-from routes.dashboards.utils.utils import save_upload
+from routes.dashboards.utils import save_upload
 from routes import users_bp
 from functools import wraps
 import logging
 import bcrypt
+import traceback
 
 enroll_user_op = EnrollUserOperation()
 auth_op = AuthOperation()
@@ -21,7 +22,7 @@ def login_required(f):
     def decorated(*args, **kwargs):
         if not session.get('user_email') or not session.get('user_username'):
             flash("Please log in to continue.", "error")
-            return redirect(url_for('users.user_login', next=request.url))
+            return redirect(url_for('users.user_login'))
         return f(*args, **kwargs)
     return decorated
 
@@ -34,19 +35,11 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated
 
-def _get_user_data():
-    email = session.get('user_email')
-    if not email: return None
-    try: return auth_op.get_user_by_email(email)
-    except Exception as e:
-        logger.error(f"Error fetching user data: {e}")
-        return None
-
 @users_bp.route('/api/ping', methods=['POST'])
-@login_required
 def api_ping():
     email = session.get('user_email')
-    if email: auth_op.update_last_active(email)
+    if email: 
+        auth_op.update_last_active(email)
     return jsonify({"status": "ok"})
 
 @users_bp.route('/', methods=['GET'])
@@ -70,57 +63,68 @@ def index():
 def dashboard_admin(user_code):
     try:
         if session.get('user_code') != user_code: return redirect(url_for('users.index'))
-        user = _get_user_data()
+        user = auth_op.get_user_by_email(session.get('user_email'))
         if not user: return redirect(url_for('users.user_login'))
         dashboard_data = enroll_user_op.admin_get_dashboard()
         return render_template('dashboards/admin.html', user=user, dashboard=dashboard_data)
     except Exception as e:
-        logger.error(f"Admin Dashboard Error: {e}")
-        return render_template("auth/error.html", error_message="Could not load admin dashboard.")
+        print("======== CRITICAL ADMIN DASHBOARD TRACEBACK ========")
+        traceback.print_exc()
+        print("====================================================")
+        return f"<h1>Admin Dashboard Internal Error</h1><pre>{traceback.format_exc()}</pre>", 500
 
 @users_bp.route('/dashboard/project-lead/<user_code>')
 @login_required
 def dashboard_project_lead(user_code):
     try:
-        if session.get('user_role') != 'project_lead' or session.get('user_code') != user_code: return redirect(url_for('users.index'))
-        user = _get_user_data()
+        if session.get('user_role') != 'project_lead' or session.get('user_code') != user_code: 
+            return redirect(url_for('users.index'))
+        user = auth_op.get_user_by_email(session.get('user_email'))
         if not user: return redirect(url_for('users.user_login'))
         dashboard_data = enroll_user_op.get_project_lead_dashboard(user['id'])
         return render_template('dashboards/project_lead.html', user=user, dashboard=dashboard_data)
     except Exception as e:
-        logger.error(f"PL Dashboard Error: {e}")
-        return render_template("auth/error.html", error_message="Could not load project lead dashboard.")
+        print("======== CRITICAL PL DASHBOARD TRACEBACK ========")
+        traceback.print_exc()
+        print("==================================================")
+        return f"<h1>Project Lead Dashboard Internal Error</h1><pre>{traceback.format_exc()}</pre>", 500
 
 @users_bp.route('/dashboard/quality-reviewer/<user_code>')
 @login_required
 def dashboard_quality_reviewer(user_code):
     try:
-        if session.get('user_role') != 'quality_reviewer' or session.get('user_code') != user_code: return redirect(url_for('users.index'))
-        user = _get_user_data()
+        if session.get('user_role') != 'quality_reviewer' or session.get('user_code') != user_code: 
+            return redirect(url_for('users.index'))
+        user = auth_op.get_user_by_email(session.get('user_email'))
         if not user: return redirect(url_for('users.user_login'))
         dashboard_data = enroll_user_op.get_quality_reviewer_dashboard(user['id'])
         return render_template('dashboards/quality_reviewer.html', user=user, dashboard=dashboard_data)
     except Exception as e:
-        logger.error(f"QR Dashboard Error: {e}")
-        return render_template("auth/error.html", error_message="Could not load quality reviewer dashboard.")
+        print("======== CRITICAL QR DASHBOARD TRACEBACK ========")
+        traceback.print_exc()
+        print("==================================================")
+        return f"<h1>Quality Reviewer Dashboard Internal Error</h1><pre>{traceback.format_exc()}</pre>", 500
 
 @users_bp.route('/dashboard/tasker/<user_code>')
 @login_required
 def dashboard_tasker(user_code):
     try:
-        if session.get('user_role') != 'tasker' or session.get('user_code') != user_code: return redirect(url_for('users.index'))
-        user = _get_user_data()
+        if session.get('user_role') != 'tasker' or session.get('user_code') != user_code: 
+            return redirect(url_for('users.index'))
+        user = auth_op.get_user_by_email(session.get('user_email'))
         if not user: return redirect(url_for('users.user_login'))
         dashboard_data = enroll_user_op.get_tasker_dashboard(user['id'])
         return render_template('dashboards/tasker.html', user=user, dashboard=dashboard_data)
     except Exception as e:
-        logger.error(f"Tasker Dashboard Error: {e}")
-        return render_template("auth/error.html", error_message="Could not load tasker dashboard.")
+        print("======== CRITICAL TASKER DASHBOARD TRACEBACK ========")
+        traceback.print_exc()
+        print("=====================================================")
+        return f"<h1>Tasker Dashboard Internal Error</h1><pre>{traceback.format_exc()}</pre>", 500
 
 @users_bp.route('/tasks')
 @login_required
 def tasks_page():
-    user = _get_user_data()
+    user = auth_op.get_user_by_email(session.get('user_email'))
     if not user: return redirect(url_for('users.user_login'))
     tasks_data = enroll_user_op.get_all_user_tasks(user['id'])
     return render_template('dashboards/tasks.html', user=user, tasks=tasks_data)
@@ -128,7 +132,7 @@ def tasks_page():
 @users_bp.route('/attendance')
 @login_required
 def attendance_page():
-    user = _get_user_data()
+    user = auth_op.get_user_by_email(session.get('user_email'))
     if not user: return redirect(url_for('users.user_login'))
     full_history = enroll_user_op.get_full_attendance_history(user['id'])
     return render_template('dashboards/attendance.html', user=user, attendance_history=full_history)
@@ -136,39 +140,16 @@ def attendance_page():
 @users_bp.route('/leave')
 @login_required
 def leave_page():
-    user = _get_user_data()
+    user = auth_op.get_user_by_email(session.get('user_email'))
     if not user: return redirect(url_for('users.user_login'))
     my_leaves = enroll_user_op.get_my_leaves(user['id'])
     team_leaves = enroll_user_op.get_pending_team_leaves(user['id'], user['role'])
     return render_template('dashboards/leave.html', user=user, my_leaves=my_leaves, team_leaves=team_leaves)
 
-@users_bp.route('/settings')
-@login_required
-def settings_page():
-    user = _get_user_data()
-    if not user: return redirect(url_for('users.user_login'))
-    settings = enroll_user_op.get_user_settings(user['id'])
-    return render_template('dashboards/settings.html', user=user, settings=settings)
-
-@users_bp.route('/api/user/settings', methods=['POST'])
-@login_required
-def api_update_user_settings():
-    user = _get_user_data()
-    if not user: return jsonify({"error": "Unauthorized"}), 401
-    data = request.get_json()
-    theme = data.get('theme', 'system')
-    notif_email = 1 if data.get('notif_email') else 0
-    notif_review = 1 if data.get('notif_review') else 0
-    notif_digest = 1 if data.get('notif_digest') else 0
-    result = enroll_user_op.update_user_settings(user['id'], theme, notif_email, notif_review, notif_digest)
-    session['user_theme'] = theme 
-    if result.get("status") == "ok": return jsonify({"status": "ok"})
-    return jsonify({"error": result.get("message", "Failed to save settings")}), 400
-
 @users_bp.route('/api/attendance/punch-in', methods=['POST'])
 @login_required
 def api_punch_in():
-    user = _get_user_data()
+    user = auth_op.get_user_by_email(session.get('user_email'))
     if not user: return jsonify({"error": "Unauthorized"}), 401
     result = enroll_user_op.punch_in(user['id'])
     if result.get("status") == "error": return jsonify({"error": result.get("message", "Error")}), 400
@@ -177,7 +158,7 @@ def api_punch_in():
 @users_bp.route('/api/attendance/punch-out', methods=['POST'])
 @login_required
 def api_punch_out():
-    user = _get_user_data()
+    user = auth_op.get_user_by_email(session.get('user_email'))
     if not user: return jsonify({"error": "Unauthorized"}), 401
     result = enroll_user_op.punch_out(user['id'])
     if result.get("status") == "error": return jsonify({"error": result.get("message", "Error")}), 400
@@ -186,7 +167,7 @@ def api_punch_out():
 @users_bp.route('/api/attendance/status', methods=['GET'])
 @login_required
 def api_attendance_status():
-    user = _get_user_data()
+    user = auth_op.get_user_by_email(session.get('user_email'))
     if not user: return jsonify({"error": "Unauthorized"}), 401
     return jsonify(enroll_user_op.get_attendance_status(user['id']))
 
@@ -194,7 +175,7 @@ def api_attendance_status():
 @login_required
 def api_leave_request():
     try:
-        user = _get_user_data()
+        user = auth_op.get_user_by_email(session.get('user_email'))
         if not user: return jsonify({"error": "Unauthorized"}), 401
         leave_type = request.form.get('leave_type')
         start_date = request.form.get('start_date')
@@ -213,7 +194,7 @@ def api_leave_request():
 @users_bp.route('/api/leave/action', methods=['POST'])
 @login_required
 def api_leave_action():
-    user = _get_user_data()
+    user = auth_op.get_user_by_email(session.get('user_email'))
     if not user or user['role'] == 'tasker': return jsonify({"error": "Unauthorized"}), 403
     data = request.get_json()
     leave_id = data.get('leave_id')
@@ -224,17 +205,17 @@ def api_leave_action():
             leave_data = result['leave_data']
             if result['new_status'] in ['approved', 'rejected']:
                 msg = Message(subject=f"Leave Request {result['new_status'].title()}", sender=session.get('user_email'), recipients=[leave_data['email']])
-                msg.body = f"Hello {leave_data['username']},\n\nYour leave request for {leave_data['leave_days']} days starting on {leave_data['start_date']} has been {result['new_status']}.\n\nRegards,\nManagement Team"
+                msg.body = f"Hello {leave_data['username']},\n\nYour leave request for {leave_data['leave_days']} days starting on {leave_data['start_date']} has been {result['new_status']}.\n\nRegards,\nManagement"
                 mail.send(msg)
         except Exception as e:
-            logger.error(f"Email orchestration breakdown for leave context notification: {e}")
+            logger.error(f"Email failed to send for leave: {e}")
         return jsonify({"status": "ok"})
     return jsonify({"error": result.get("message", "Error")}), 400
 
 @users_bp.route('/api/task/submit', methods=['POST'])
 @login_required
 def api_task_submit():
-    user = _get_user_data()
+    user = auth_op.get_user_by_email(session.get('user_email'))
     if not user: return jsonify({"error": "Unauthorized"}), 401
     data = request.get_json()
     task_id = data.get('task_id')
@@ -251,13 +232,13 @@ def api_task_submit():
 @login_required
 def api_task_review():
     if session.get('user_role') != 'quality_reviewer': return jsonify({"error": "Denied"}), 403
-    user = _get_user_data()
+    user = auth_op.get_user_by_email(session.get('user_email'))
     if not user: return jsonify({"error": "Unauthorized"}), 401
     data = request.get_json()
     task_id = data.get('task_id')
     decision = data.get('decision')
     note = data.get('note', '')
-    if not task_id or decision not in ('approve', 'reject'): return jsonify({"error": "Invalid parameters"}), 400
+    if not task_id or decision not in ('approve', 'reject'): return jsonify({"error": "Invalid"}), 400
     result = enroll_user_op.review_task(task_id, user['id'], decision, note)
     if result.get("status") == "ok": return jsonify(result)
     return jsonify({"error": result.get("message", "Error")}), 400
@@ -266,7 +247,7 @@ def api_task_review():
 @login_required
 def api_task_assign():
     if session.get('user_role') not in ('project_lead', 'quality_reviewer'): return jsonify({"error": "Denied"}), 403
-    user = _get_user_data()
+    user = auth_op.get_user_by_email(session.get('user_email'))
     if not user: return jsonify({"error": "Unauthorized"}), 401
     data = request.get_json()
     title = data.get('title', '').strip()
@@ -287,7 +268,7 @@ def api_bulk_assign():
     f = request.files.get('file')
     if f:
         path = save_upload(f, 'csv')
-        user = _get_user_data()
+        user = auth_op.get_user_by_email(session.get('user_email'))
         res = enroll_user_op.bulk_assign_tasks("." + path, user['id'])
         if res['status'] == 'ok': return jsonify(res)
         return jsonify({"error": res.get("message", "Error in bulk assign")}), 400
@@ -296,27 +277,27 @@ def api_bulk_assign():
 @users_bp.route('/profile', methods=['GET'])
 @login_required
 def profile():
-    user = _get_user_data()
-    if not user: return redirect(url_for('users.index'))
+    user = auth_op.get_user_by_email(session.get('user_email'))
+    if not user: return redirect(url_for('users.user_login'))
     profile_data = enroll_user_op.get_profile(user['id'])
     return render_template("dashboards/profile.html", user=user, profile=profile_data)
 
 @users_bp.route('/api/profile/update', methods=['POST'])
 @login_required
 def api_profile_update():
-    user = _get_user_data()
+    user = auth_op.get_user_by_email(session.get('user_email'))
     if not user: return jsonify({"error": "Unauthorized"}), 401
     data = request.get_json()
     username = data.get('username', '').strip()
     job_title = data.get('job_title', '').strip()
     current_password = data.get('current_password', '')
     new_password = data.get('new_password', '')
-    if not username or len(username) < 3: return jsonify({"error": "Username too short"}), 400
+    if not username or len(username) < 3: return jsonify({"error": "Username short"}), 400
     new_hash = None
     if new_password:
         if not current_password: return jsonify({"error": "Current password required"}), 400
         if not bcrypt.checkpw(current_password.encode(), user['password'].encode()): return jsonify({"error": "Current password incorrect"}), 400
-        if len(new_password) < 8: return jsonify({"error": "New password too short"}), 400
+        if len(new_password) < 8: return jsonify({"error": "New password short"}), 400
         new_hash = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode()
     result = enroll_user_op.update_profile(user['id'], username, job_title, new_hash)
     if result.get("status") == "ok":
@@ -369,7 +350,7 @@ def api_admin_email():
         mail.send(msg)
         return jsonify({"status": "ok"})
     except Exception as e:
-        logger.error(f"Admin Email Broadcast Fault Context: {e}")
+        logger.error(f"Admin Email Send Error: {e}")
         return jsonify({"error": "Failed to send email"}), 400
 
 @users_bp.route('/api/admin/add_user', methods=['POST'])
@@ -386,3 +367,28 @@ def api_admin_add_user():
     result = enroll_user_op.admin_add_user(username, email, role)
     if result.get("status") == "ok": return jsonify({"status": "ok"})
     return jsonify({"error": result.get("message", "Failed to add user.")}), 400
+
+@users_bp.route('/settings')
+@login_required
+def settings_page():
+    user = auth_op.get_user_by_email(session.get('user_email'))
+    if not user: return redirect(url_for('users.user_login'))
+    settings = enroll_user_op.get_user_settings_data(user['id'])
+    return render_template('dashboards/settings.html', user=user, settings=settings)
+
+@users_bp.route('/api/user/settings', methods=['POST'])
+@login_required
+def api_update_user_settings():
+    user = auth_op.get_user_by_email(session.get('user_email'))
+    if not user: return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.get_json()
+    theme = data.get('theme', 'system')
+    notif_email = 1 if data.get('notif_email') else 0
+    notif_review = 1 if data.get('notif_review') else 0
+    notif_digest = 1 if data.get('notif_digest') else 0
+    
+    result = enroll_user_op.update_user_settings(user['id'], theme, notif_email, notif_review, notif_digest)
+    session['user_theme'] = theme 
+    if result.get("status") == "ok": return jsonify({"status": "ok"})
+    return jsonify({"error": result.get("message", "Failed to save settings")}), 400
