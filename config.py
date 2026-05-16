@@ -9,14 +9,14 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY')
     CSRF_SESSION_KEY = os.environ.get('CSRF_SESSION_KEY')
 
-    DATABASE_HOST = os.environ.get('DATABASE_HOST', 'switchback.proxy.rlwy.net')
-    DATABASE_PORT = int(os.environ.get('DATABASE_PORT', 3306))
+    DATABASE_HOST = os.environ.get('DATABASE_HOST')
+    DATABASE_PORT = int(os.environ.get('DATABASE_PORT'))
     DATABASE_USER = os.environ.get('DATABASE_USER', 'root')
     DATABASE_PASSWORD = os.environ.get('DATABASE_PASSWORD')
     DATABASE_NAME = os.environ.get('DATABASE_NAME')
 
-    MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
-    MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
+    MAIL_SERVER = os.environ.get('MAIL_SERVER')
+    MAIL_PORT = int(os.environ.get('MAIL_PORT'))
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'true').lower() == 'true'

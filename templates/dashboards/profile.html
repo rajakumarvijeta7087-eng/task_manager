@@ -1,0 +1,96 @@
+{% extends 'dashboards/base.html' %}
+{% block title %}User Profile{% endblock %}
+{% block breadcrumb %}My Profile{% endblock %}
+
+{% block content %}
+<div style="max-width: 1000px; margin: 0 auto;">
+
+    <div class="profile-header-card">
+        <div class="profile-avatar-lg">
+            {{ profile.username[0].upper() }}
+        </div>
+        <div class="profile-header-info">
+            <div class="profile-name">{{ profile.username }}</div>
+            <div class="profile-role">
+                {% if profile.role == 'project_lead' %}🎯 Project Lead
+                {% elif profile.role == 'quality_reviewer' %}🔍 Quality Reviewer
+                {% elif profile.role == 'tasker' %}⚡ Tasker
+                {% else %}{{ profile.role }}{% endif %}
+            </div>
+            <div class="profile-info-list">
+                <span class="profile-info-item"><i class="fas fa-envelope"></i> {{ profile.email }}</span>
+                <span class="profile-info-item"><i class="fas fa-briefcase"></i> {{ profile.job_title or 'No Title Set' }}</span>
+                <span class="profile-info-item"><i class="fas fa-calendar-alt"></i> Joined {{ profile.created_at }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 24px;">
+        
+        <div>
+            <div class="dash-card">
+                <div class="card-header">Account Activity</div>
+                <div class="card-body" style="padding: 0;">
+                    <div style="padding: 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between;">
+                        <span style="color: var(--text-muted); font-weight: 600; font-size: 12px; text-transform: uppercase;">Last Login</span>
+                        <span style="font-weight: 600;">{{ profile.last_active or 'N/A' }}</span>
+                    </div>
+                    <div style="padding: 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between;">
+                        <span style="color: var(--text-muted); font-weight: 600; font-size: 12px; text-transform: uppercase;">Total Tasks</span>
+                        <span style="font-weight: 600;">{{ profile.total_tasks }}</span>
+                    </div>
+                    <div style="padding: 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between;">
+                        <span style="color: var(--text-muted); font-weight: 600; font-size: 12px; text-transform: uppercase;">Completed Tasks</span>
+                        <span style="font-weight: 600; color: var(--success);">{{ profile.completed_tasks }}</span>
+                    </div>
+                    <div style="padding: 16px; display: flex; justify-content: space-between;">
+                        <span style="color: var(--text-muted); font-weight: 600; font-size: 12px; text-transform: uppercase;">Hours Logged</span>
+                        <span style="font-weight: 600; color: var(--accent); font-family: var(--font-mono);">{{ profile.total_hours }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div class="dash-card">
+                <div class="card-header">Edit Profile & Security</div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" id="profUsername" class="form-control" value="{{ profile.username }}">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Email Address (Read-Only)</label>
+                        <input type="email" class="form-control" value="{{ profile.email }}" disabled style="background: var(--surface2); color: var(--text-muted);">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Job Title</label>
+                        <input type="text" id="profJobTitle" class="form-control" value="{{ profile.job_title or '' }}" placeholder="e.g. Senior Frontend Developer">
+                    </div>
+
+                    <hr style="border: 0; border-top: 1px solid var(--border); margin: 24px 0;">
+                    <h4 style="margin-bottom: 16px; font-size: 14px;">Change Password</h4>
+                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">Leave blank if you do not wish to change your password.</p>
+
+                    <div class="form-group">
+                        <label class="form-label">Current Password</label>
+                        <input type="password" id="profCurrentPwd" class="form-control" placeholder="Enter current password to authorize change">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">New Password</label>
+                        <input type="password" id="profNewPwd" class="form-control" placeholder="Minimum 8 characters">
+                    </div>
+
+                    <div style="margin-top: 24px; text-align: right;">
+                        <button class="btn btn-primary" id="btnUpdateProfile">Save Changes</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

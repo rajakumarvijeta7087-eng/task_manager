@@ -3,26 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sign Up — TaskTrack</title>
+<title>Sign Up</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/auth/user_signup.css') }}">
 </head>
 <body>
-<div class="left-panel">
-  <div class="brand">
-    <div class="brand-logo"><span class="dot"></span>SHYAM PRACTICE PAPER</div>
-  </div>
-  <div class="left-tagline">
-    <h2>MANAGE.<br><span>TRACK.</span><br>DELIVER.</h2>
-    <p>The workspace where teams build, track, and ship projects with precision and clarity.</p>
-  </div>
-  <div class="left-stats">
-  </div>
-</div>
-<div class="right-panel">
-  <div class="form-box">
+
+<div class="auth-wrapper">
+  <div class="auth-card">
+
+    <div class="brand-header">
+      <div class="dot"></div>
+      ETHARA.AI
+    </div>
 
     <div class="flash-container">
       {% with messages = get_flashed_messages(with_categories=true) %}
@@ -30,7 +25,7 @@
           {% for category, message in messages %}
           <div class="flash {{ category }}">
             <i class="fas {% if 'error' in category %}fa-circle-xmark{% elif 'success' in category %}fa-circle-check{% elif 'warning' in category %}fa-triangle-exclamation{% else %}fa-circle-info{% endif %}"></i>
-            {{ message }}
+            <span>{{ message }}</span>
           </div>
           {% endfor %}
         {% endif %}
@@ -45,11 +40,10 @@
       <div class="step-dot"></div>
     </div>
     <p class="page-title">Choose Role</p>
-    <p class="page-subtitle">Select how you'll use TaskTrack</p>
+    <p class="page-subtitle">Select how you'll use the platform</p>
 
     <form action="{{ url_for('users.user_signup') }}" method="POST">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <div class="section-label">Select Role *</div>
       <div class="role-grid">
         <div class="role-card">
           <input type="radio" name="role" id="role_pl" value="project_lead" required>
@@ -64,10 +58,18 @@
           <label for="role_tk"><span class="role-name">Tasker</span></label>
         </div>
       </div>
-      <button type="submit" class="btn-primary" style="margin-top:18px;">
+      <button type="submit" class="btn-primary">
         Continue <i class="fas fa-arrow-right"></i>
       </button>
     </form>
+    <div class="divider">or</div>
+    <div class="auth-link">Already have an account? <a href="{{ url_for('users.user_login', next=request.args.get('next', '')) }}">Sign In</a></div>
+
+    <div style="margin-top: 25px; text-align: center;">
+      <a href="{{ url_for('users.admin_login') }}" style="font-size: 13px; color: var(--text-muted); text-decoration: none; font-weight: 600;">
+        <i class="fas fa-shield-alt"></i> Admin Portal
+      </a>
+    </div>
 
     {% elif step == 'details' %}
     <div class="step-indicator">
@@ -75,22 +77,24 @@
       <div class="step-dot active"></div>
       <div class="step-dot"></div>
       <div class="step-dot"></div>
+      {% if signup_data.user_signup_role in ['quality_reviewer', 'tasker'] %}
+      <div class="step-dot"></div>
+      {% endif %}
     </div>
     <p class="page-title">Your Details</p>
     <p class="page-subtitle">Set up your account information</p>
 
     {% set role_labels = {'project_lead': 'Project Lead', 'quality_reviewer': 'Quality Reviewer', 'tasker': 'Tasker'} %}
-    {% set role_icons = {'project_lead': '', 'quality_reviewer': '', 'tasker': ''} %}
     <div class="role-badge">
-      {{ role_icons.get(signup_data.user_signup_role, '') }} {{ role_labels.get(signup_data.user_signup_role, signup_data.user_signup_role) }}
+      {{ role_labels.get(signup_data.user_signup_role, signup_data.user_signup_role) }}
     </div>
 
     <form action="{{ url_for('users.user_signup') }}" method="POST">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="csrf_token" id="csrfToken" value="{{ csrf_token() }}">
       <div class="form-group">
         <label class="form-label">Username *</label>
         <input type="text" id="username" name="username" class="form-control" placeholder="your_username" required autocomplete="off" minlength="3">
-        <small id="usernameFeedback" class="username-feedback" style="display:none;"></small>
+        <div id="usernameFeedback" class="username-feedback"></div>
       </div>
       <div class="form-group">
         <label class="form-label">Job Title</label>
@@ -109,74 +113,67 @@
       <i class="fas fa-arrow-left"></i> Go Back
     </a>
 
-    <script>
-    const usernameInput = document.getElementById('username');
-    const feedback = document.getElementById('usernameFeedback');
-    const btn = document.getElementById('detailsBtn');
-    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-    let timer;
+    {% elif step == 'assignment' %}
+    <div class="step-indicator">
+      <div class="step-dot done"></div>
+      <div class="step-dot done"></div>
+      <div class="step-dot active"></div>
+      <div class="step-dot"></div>
+      <div class="step-dot"></div>
+    </div>
+    <p class="page-title">Team Assignment</p>
+    <p class="page-subtitle">Select your reporting managers</p>
 
-    usernameInput.addEventListener('input', function() {
-      clearTimeout(timer);
-      const val = this.value.trim();
-      if (val.length < 3) {
-        feedback.style.display = 'none';
-        btn.disabled = false;
-        return;
-      }
-      btn.disabled = true;
-      feedback.style.display = 'flex';
-      feedback.style.color = 'var(--text-dim)';
-      feedback.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
-      timer = setTimeout(() => {
-        fetch('/api/auth/check-username', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-          body: JSON.stringify({ username: val })
-        })
-        .then(r => r.json())
-        .then(data => {
-          if (data.status === 'available') {
-            feedback.style.color = 'var(--black)';
-            feedback.innerHTML = '<i class="fas fa-check"></i> ' + data.message;
-            btn.disabled = false;
-          } else {
-            feedback.style.color = 'var(--error)';
-            feedback.innerHTML = '<i class="fas fa-xmark"></i> ' + data.message;
-            btn.disabled = true;
-          }
-        })
-        .catch(() => {
-          feedback.style.display = 'none';
-          btn.disabled = false;
-        });
-      }, 500);
-    });
-    </script>
+    <form action="{{ url_for('users.user_signup') }}" method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      
+      <div class="form-group">
+        <label class="form-label">Project Lead *</label>
+        <select name="assigned_pl" class="form-control" required>
+          <option value="">Select Project Lead...</option>
+          {% for pl in pl_list %}
+          <option value="{{ pl.id }}">{{ pl.username }} ({{ pl.email }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      {% if signup_data.user_signup_role == 'tasker' %}
+      <div class="form-group">
+        <label class="form-label">Quality Reviewer *</label>
+        <select name="assigned_qr" class="form-control" required>
+          <option value="">Select Quality Reviewer...</option>
+          {% for qr in qr_list %}
+          <option value="{{ qr.id }}">{{ qr.username }} ({{ qr.email }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+
+      <button type="submit" class="btn-primary">
+        Continue <i class="fas fa-arrow-right"></i>
+      </button>
+    </form>
+
+    <a href="{{ url_for('users.user_signup', go_back=1) }}" class="back-link">
+      <i class="fas fa-arrow-left"></i> Go Back
+    </a>
 
     {% elif step == 'password' %}
     <div class="step-indicator">
       <div class="step-dot done"></div>
       <div class="step-dot done"></div>
+      {% if signup_data.user_signup_role in ['quality_reviewer', 'tasker'] %}
+      <div class="step-dot done"></div>
+      {% endif %}
       <div class="step-dot active"></div>
       <div class="step-dot"></div>
     </div>
     <p class="page-title">Set Password</p>
     <p class="page-subtitle">Create a strong password for your account</p>
 
-    <div class="readonly-field">
-      <div class="field-icon"><i class="fas fa-user"></i></div>
-      <div class="field-content">
-        <div class="field-label">Username</div>
-        <div class="field-value">{{ signup_data.user_signup_username }}</div>
-      </div>
-    </div>
-    <div class="readonly-field">
-      <div class="field-icon"><i class="fas fa-envelope"></i></div>
-      <div class="field-content">
-        <div class="field-label">Email</div>
-        <div class="field-value">{{ signup_data.user_signup_email }}</div>
-      </div>
+    <div class="readonly-box">
+      <div class="readonly-item"><span>Username</span><strong>{{ signup_data.user_signup_username }}</strong></div>
+      <div class="readonly-item"><span>Email</span><strong>{{ signup_data.user_signup_email }}</strong></div>
     </div>
 
     <form action="{{ url_for('users.user_signup') }}" method="POST">
@@ -185,10 +182,9 @@
         <label class="form-label">Password *</label>
         <div class="password-wrapper">
           <input type="password" id="password" name="password" class="form-control" placeholder="Create a strong password" required>
-          <span class="toggle-password" onclick="togglePw('password', this)">Show</span>
+          <span class="toggle-password" id="togglePasswordBtn">Show</span>
         </div>
         <div class="password-hints">
-          <p>Requirements</p>
           <div class="hint-item" id="hint-len"><i class="fas fa-circle"></i> At least 8 characters</div>
           <div class="hint-item" id="hint-upper"><i class="fas fa-circle"></i> One uppercase letter</div>
           <div class="hint-item" id="hint-num"><i class="fas fa-circle"></i> One number</div>
@@ -204,37 +200,14 @@
       <i class="fas fa-arrow-left"></i> Go Back
     </a>
 
-    <script>
-    function togglePw(id, el) {
-      const input = document.getElementById(id);
-      input.type = input.type === 'password' ? 'text' : 'password';
-      el.textContent = input.type === 'password' ? 'Show' : 'Hide';
-    }
-
-    document.getElementById('password').addEventListener('input', function() {
-      const v = this.value;
-      const checks = {
-        'hint-len': v.length >= 8,
-        'hint-upper': /[A-Z]/.test(v),
-        'hint-num': /[0-9]/.test(v),
-        'hint-special': /[^A-Za-z0-9]/.test(v)
-      };
-      let allOk = true;
-      for (const [id, ok] of Object.entries(checks)) {
-        const el = document.getElementById(id);
-        el.classList.toggle('ok', ok);
-        el.querySelector('i').className = ok ? 'fas fa-check' : 'fas fa-circle';
-        if (!ok) allOk = false;
-      }
-      document.getElementById('pwBtn').disabled = !allOk;
-    });
-    </script>
-
     {% elif step == 'otp' %}
     <div class="step-indicator">
       <div class="step-dot done"></div>
       <div class="step-dot done"></div>
       <div class="step-dot done"></div>
+      {% if signup_data.user_signup_role in ['quality_reviewer', 'tasker'] %}
+      <div class="step-dot done"></div>
+      {% endif %}
       <div class="step-dot active"></div>
     </div>
     <p class="page-title">Verify Email</p>
@@ -245,45 +218,22 @@
       <input type="hidden" name="otp" id="otpHidden">
       <div class="otp-input-group">
         {% for i in range(6) %}
-        <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" pattern="[0-9]">
+        <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" required>
         {% endfor %}
       </div>
-      <button type="submit" class="btn-primary">
+      <button type="submit" class="btn-primary" id="otpSubmitBtn">
         Verify & Continue <i class="fas fa-check"></i>
       </button>
     </form>
 
-    <form action="{{ url_for('users.user_resend_otp') }}" method="POST" class="auth-link" style="margin-top:16px;">
+    <form action="{{ url_for('users.user_resend_otp') }}" method="POST" class="resend-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      Didn't receive it? <button type="submit" style="background:none;border:none;color:var(--black);font-size:12px;font-weight:600;cursor:pointer;padding:0;border-bottom:1px solid currentColor;">Resend OTP</button>
+      Didn't receive it? <button type="submit" class="resend-btn">Resend OTP</button>
     </form>
-
-    <script>
-    const digits = document.querySelectorAll('.otp-digit');
-    const hidden = document.getElementById('otpHidden');
-
-    digits.forEach((d, i) => {
-      d.addEventListener('input', () => {
-        d.value = d.value.replace(/\D/g, '');
-        if (d.value && i < digits.length - 1) digits[i+1].focus();
-        hidden.value = [...digits].map(x => x.value).join('');
-      });
-      d.addEventListener('keydown', e => {
-        if (e.key === 'Backspace' && !d.value && i > 0) digits[i-1].focus();
-      });
-      d.addEventListener('paste', e => {
-        e.preventDefault();
-        const paste = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g,'').slice(0,6);
-        paste.split('').forEach((ch, j) => { if (digits[j]) digits[j].value = ch; });
-        if (digits[paste.length - 1]) digits[paste.length - 1].focus();
-        hidden.value = [...digits].map(x => x.value).join('');
-      });
-    });
-    </script>
     {% endif %}
-    <div class="divider">or</div>
-    <div class="auth-link">Already have an account? <a href="{{ url_for('users.user_login', next=request.args.get('next', '')) }}">Sign In</a></div>
+
   </div>
 </div>
+<script src="{{ url_for('static', filename='js/auth/user_signup.js') }}"></script>
 </body>
 </html>

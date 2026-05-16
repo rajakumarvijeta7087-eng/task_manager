@@ -34,11 +34,8 @@ def user_login_required(f):
 def admin_login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if 'admin_email' not in session or 'admin_username' not in session:
-            flash("Admin login required to access this page.", "admin_login_required")
-            return redirect(url_for('admin.admin_login', next=request.url))
-        if session.get('admin_role') not in ['admin', 'owner']:
-            flash("You do not have permission to access this page.", "admin_login_permission")
-            return abort(403)
+        if session.get('user_role') != 'admin':
+            flash("Admin login required to access this page.", "error")
+            return redirect(url_for('users.admin_login', next=request.url))
         return f(*args, **kwargs)
     return decorated_function

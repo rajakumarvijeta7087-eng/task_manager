@@ -1,0 +1,192 @@
+{% extends 'dashboards/base.html' %}
+{% block title %}Leave Management{% endblock %}
+{% block breadcrumb %}Leave Management{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+    <div class="dashboard-header">
+        <h1 class="dash-title">Leave Management</h1>
+        <p class="dash-subtitle">Request time off and manage team leaves.</p>
+    </div>
+
+    {% if user.role in ['quality_reviewer', 'project_lead'] %}
+    <div class="dash-card mb-20" style="border-left: 4px solid var(--primary);">
+        <div class="card-header"><span class="card-title">Action Required: Team Leave Requests</span></div>
+        <div class="card-body" style="padding: 0;">
+            {% if team_leaves %}
+            <table class="dash-table" style="margin: 0; width: 100%;">
+                <thead><tr><th>Employee</th><th>Dates (Days)</th><th>Reason</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody>
+                    {% for l in team_leaves %}
+                    <tr>
+                        <td><strong>{{ l.username }}</strong><br><span style="font-size:10px;color:gray;">{{ l.email }}</span></td>
+                        <td>{{ l.start_date }} to {{ l.end_date }}<br><span style="color:var(--accent); font-weight:bold;">{{ l.leave_days }} Days</span></td>
+                        <td style="max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ l.reason }}">{{ l.reason }}</td>
+                        <td><span class="badge status-pending">{{ l.status | replace('_', ' ') | title }}</span></td>
+                        <td>
+                            <button class="btn btn-secondary text-error border-error btn-leave-action" data-id="{{ l.id }}" data-action="reject">Reject</button>
+                            {% if user.role == 'quality_reviewer' %}
+                            <button class="btn btn-primary bg-success btn-leave-action" data-id="{{ l.id }}" data-action="approve_qr">Forward to PL</button>
+                            {% elif user.role == 'project_lead' %}
+                            <button class="btn btn-primary bg-success btn-leave-action" data-id="{{ l.id }}" data-action="approve_pl">Approve Final</button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state" style="padding: 15px;">No pending leave requests from your team.</div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="dash-grid-2col">
+        <div class="dash-card">
+            <div class="card-header"><span class="card-title">Request Leave</span></div>
+            <div class="card-body">
+                <form id="leaveRequestForm">
+                    <div class="form-group">
+                        <label class="form-label">Leave Type *</label>
+                        <select class="form-select" id="leaveType" required>
+                            <option value="">Select leave type...</option>
+                            <option value="sick">Sick Leave</option>
+                            <option value="casual">Casual / Personal Leave</option>
+                            <option value="unpaid">Unpaid Leave</option>
+                        </select>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="form-group">
+                            <label class="form-label">Start Date *</label>
+                            <input type="date" class="form-input" id="leaveStart" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">End Date *</label>
+                            <input type="date" class="form-input" id="leaveEnd" required>
+                        </div>
+                    </div>
+                    <div style="text-align: right; font-size: 14px; font-weight: bold; color: var(--accent); margin-bottom: 10px;" id="leaveDaysDisplay">0 Days</div>
+
+                    <div class="form-group">
+                        <label class="form-label">Reason *</label>
+                        <textarea class="form-textarea" id="leaveReason" rows="3" placeholder="Please provide a brief reason..." required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Medical Certificate / Attachment (Optional)</label>
+                        <input type="file" class="form-input" id="leaveAttachment" accept=".pdf,.jpg,.jpeg,.png">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" id="btnSubmitLeave" style="width: 100%;">
+                        <i class="fas fa-paper-plane" style="margin-right: 8px;"></i> Submit Request
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="dash-card">
+            <div class="card-header"><span class="card-title">My Leave History</span></div>
+            <div class="card-body" style="padding: 0;">
+                {% if my_leaves %}
+                <table class="dash-table" style="margin: 0; width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>Type & Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ml in my_leaves %}
+                        <tr>
+                            <td>
+                                <div style="font-weight: 600; text-transform: capitalize;">{{ ml.leave_type }} Leave ({{ ml.leave_days }} Days)</div>
+                                <div style="font-size: 11px; color: var(--text-muted);">{{ ml.start_date }} - {{ ml.end_date }}</div>
+                            </td>
+                            <td><span class="badge status-{{ ml.status | lower | replace('_', '-') }}">{{ ml.status | replace('_', ' ') | title }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">No past leave requests.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    function calcDays() {
+       let start = new Date(document.getElementById('leaveStart').value);
+       let end = new Date(document.getElementById('leaveEnd').value);
+       if(start && end && end >= start) {
+           let diff = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+           document.getElementById('leaveDaysDisplay').textContent = diff + " Days";
+           return diff;
+       }
+       document.getElementById('leaveDaysDisplay').textContent = "0 Days";
+       return 0;
+    }
+
+    document.getElementById('leaveStart').addEventListener('change', calcDays);
+    document.getElementById('leaveEnd').addEventListener('change', calcDays);
+
+    const leaveForm = document.getElementById('leaveRequestForm');
+    if(leaveForm) {
+        leaveForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const days = calcDays();
+            if(days <= 0) return alert("End date must be on or after start date.");
+            
+            const btnSubmit = document.getElementById('btnSubmitLeave');
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = 'Submitting... <i class="fas fa-spinner fa-spin"></i>';
+
+            const formData = new FormData();
+            formData.append('leave_type', document.getElementById('leaveType').value);
+            formData.append('start_date', document.getElementById('leaveStart').value);
+            formData.append('end_date', document.getElementById('leaveEnd').value);
+            formData.append('reason', document.getElementById('leaveReason').value);
+            formData.append('leave_days', days);
+            
+            const fileInput = document.getElementById('leaveAttachment');
+            if (fileInput.files.length > 0) formData.append('attachment', fileInput.files[0]);
+
+            try {
+                const res = await fetch('/api/leave/request', {
+                    method: 'POST',
+                    headers: {'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')},
+                    body: formData
+                });
+                const data = await res.json();
+                if (res.ok) { alert('Request submitted!'); location.reload(); } 
+                else { alert('Error: ' + (data.error || 'Failed.')); }
+            } catch(err) { alert('Network error.'); } 
+            finally { btnSubmit.disabled = false; btnSubmit.innerHTML = '<i class="fas fa-paper-plane" style="margin-right: 8px;"></i> Submit Request'; }
+        });
+    }
+
+    document.querySelectorAll('.btn-leave-action').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            if(!confirm("Are you sure?")) return;
+            const action = e.target.getAttribute('data-action');
+            const leaveId = e.target.getAttribute('data-id');
+            e.target.disabled = true; e.target.textContent = "...";
+            try {
+                const res = await fetch('/api/leave/action', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
+                    body: JSON.stringify({ leave_id: leaveId, action: action })
+                });
+                if(res.ok) { location.reload(); } else { alert("Failed to process."); }
+            } catch(err) { alert("Network error."); }
+        });
+    });
+});
+</script>
+{% endblock %}

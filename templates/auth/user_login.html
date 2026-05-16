@@ -3,26 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sign In — TaskTrack</title>
+<title>Sign In</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/auth/user_login.css') }}">
 </head>
 <body>
-<div class="left-panel">
-  <div class="brand">
-    <div class="brand-logo"><span class="dot"></span>SHYAM PRACTICE PAPER</div>
-  </div>
-  <div class="left-tagline">
-    <h2>MANAGE.<br><span>TRACK.</span><br>DELIVER.</h2>
-    <p>The workspace where teams build, track, and ship projects with precision and clarity.</p>
-  </div>
-  <div class="left-stats">
-  </div>
-</div>
-<div class="right-panel">
-  <div class="form-box">
+
+<div class="auth-wrapper">
+  <div class="auth-card">
+
+    <div class="brand-header">
+      <div class="dot"></div>
+      ETHARA.AI
+    </div>
 
     <div class="flash-container">
       {% with messages = get_flashed_messages(with_categories=true) %}
@@ -30,7 +25,7 @@
           {% for category, message in messages %}
           <div class="flash {{ category }}">
             <i class="fas {% if 'error' in category %}fa-circle-xmark{% elif 'success' in category %}fa-circle-check{% elif 'warning' in category %}fa-triangle-exclamation{% else %}fa-circle-info{% endif %}"></i>
-            {{ message }}
+            <span>{{ message }}</span>
           </div>
           {% endfor %}
         {% endif %}
@@ -63,7 +58,7 @@
 
     {% elif step == 'password' %}
     <p class="page-title">Enter Password</p>
-    <p class="page-subtitle">Signing in as <strong style="color:var(--text); font-weight:600;">{{ session.get('user_email_pending', '') }}</strong></p>
+    <p class="page-subtitle">Signing in as <strong>{{ session.get('user_email_pending', '') }}</strong></p>
 
     <form action="{{ url_for('users.user_login') }}" method="POST">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -71,7 +66,7 @@
         <label class="form-label">Password</label>
         <div class="password-wrapper">
           <input type="password" id="password" name="password" class="form-control" placeholder="Your password" required autofocus>
-          <span class="toggle-password" onclick="const i=document.getElementById('password');i.type=i.type==='password'?'text':'password';this.textContent=i.type==='password'?'Show':'Hide'">Show</span>
+          <span class="toggle-password" id="togglePasswordBtn">Show</span>
         </div>
       </div>
       <button type="submit" class="btn-primary">
@@ -85,13 +80,56 @@
       </a>
       <a href="{{ url_for('users.user_forgot_password') }}" class="forgot">Forgot Password?</a>
     </div>
+
+    {% elif step == 'setup_otp' %}
+    <p class="page-title">First Time Setup</p>
+    <p class="page-subtitle">Enter the 6-digit code sent to <strong>{{ session.get('user_setup_pending', {}).get('email', '') }}</strong></p>
+
+    <form action="{{ url_for('users.user_login') }}" method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group">
+        <input type="text" name="setup_otp" class="form-control" placeholder="123456" required autofocus maxlength="6">
+      </div>
+      <button type="submit" class="btn-primary">
+        Verify Email <i class="fas fa-check"></i>
+      </button>
+    </form>
+
+    <div class="nav-links">
+      <a href="{{ url_for('users.user_login', go_back=True) }}"><i class="fas fa-arrow-left"></i> Start Over</a>
+    </div>
+
+    {% elif step == 'set_new_password' %}
+    <p class="page-title">Set Password</p>
+    <p class="page-subtitle">Create your permanent account password</p>
+
+    <form action="{{ url_for('users.user_login') }}" method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group">
+        <label class="form-label">New Password</label>
+        <div class="password-wrapper">
+          <input type="password" id="password" name="new_password" class="form-control" placeholder="At least 8 characters" required autofocus minlength="8">
+          <span class="toggle-password" id="togglePasswordBtn">Show</span>
+        </div>
+      </div>
+      <button type="submit" class="btn-primary">
+        Save & Login <i class="fas fa-arrow-right"></i>
+      </button>
+    </form>
     {% endif %}
 
     <div class="divider">or</div>
     <div class="auth-link">Don't have an account? <a href="{{ url_for('users.user_signup', next=request.args.get('next', '')) }}">Register</a></div>
+    
+    <div style="margin-top: 25px; text-align: center;">
+      <a href="{{ url_for('users.admin_login') }}" style="font-size: 13px; color: var(--text-muted); text-decoration: none; font-weight: 600;">
+        <i class="fas fa-shield-alt"></i> Admin Portal
+      </a>
+    </div>
 
   </div>
 </div>
 
+<script src="{{ url_for('static', filename='js/auth/user_login.js') }}"></script>
 </body>
 </html>

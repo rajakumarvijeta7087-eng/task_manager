@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth/user_login.css') }}">
+<style>
+    .admin-header { background-color: #312e2e; color: #fff; padding: 20px; text-align: center; font-family: 'Bebas Neue', sans-serif; letter-spacing: 2px; font-size: 24px; border-radius: var(--radius) var(--radius) 0 0; }
+    .btn-admin { background: #070707; color: #fff; }
+    .btn-admin:hover { background: #dc2626; }
+</style>
+</head>
+<body>
+
+<div class="auth-wrapper">
+  <div class="auth-card" style="border-top: none;">
+
+    <div class="admin-header">
+      <i class="fas fa-shield-alt" style="margin-right: 8px;"></i> ADMIN PORTAL
+    </div>
+
+    <div class="flash-container">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+          <div class="flash {{ category }}">
+            <i class="fas {% if 'error' in category %}fa-circle-xmark{% elif 'success' in category %}fa-circle-check{% elif 'warning' in category %}fa-triangle-exclamation{% else %}fa-circle-info{% endif %}"></i>
+            <span>{{ message }}</span>
+          </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+    </div>
+
+    <div style="padding: 30px;">
+        {% if step == 'email' %}
+        <p class="page-title">Secure Access</p>
+        <p class="page-subtitle">Enter your admin email to continue</p>
+
+        <form action="{{ url_for('users.admin_login') }}" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="form-group">
+            <label class="form-label">Admin Email</label>
+            <input type="email" name="email" class="form-control" placeholder="admin@company.com" required autofocus>
+          </div>
+          <button type="submit" class="btn-primary btn-admin">
+            Verify Access <i class="fas fa-arrow-right"></i>
+          </button>
+        </form>
+
+        {% elif step == 'password' %}
+        <p class="page-title">Authentication</p>
+        <p class="page-subtitle">Signing in as <strong>{{ session.get('admin_email_pending', '') }}</strong></p>
+
+        <form action="{{ url_for('users.admin_login') }}" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <div class="password-wrapper">
+              <input type="password" id="password" name="password" class="form-control" placeholder="Your password" required autofocus>
+              <span class="toggle-password" id="togglePasswordBtn">Show</span>
+            </div>
+          </div>
+          <button type="submit" class="btn-primary btn-admin">
+            Request 2FA OTP <i class="fas fa-paper-plane"></i>
+          </button>
+        </form>
+
+        <div class="nav-links">
+          <a href="{{ url_for('users.admin_login', go_back=True) }}">
+            <i class="fas fa-arrow-left"></i> Go Back
+          </a>
+        </div>
+        
+        {% elif step == 'setup_otp' %}
+        <p class="page-title">First Time Setup</p>
+        <p class="page-subtitle">Enter the 6-digit code sent to <strong>{{ session.get('admin_setup_pending', {}).get('email', '') }}</strong></p>
+
+        <form action="{{ url_for('users.admin_login') }}" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="form-group">
+            <input type="text" name="setup_otp" class="form-control" placeholder="123456" required autofocus maxlength="6">
+          </div>
+          <button type="submit" class="btn-primary btn-admin">
+            Verify Email <i class="fas fa-check"></i>
+          </button>
+        </form>
+
+        {% elif step == 'set_new_password' %}
+        <p class="page-title">Set Password</p>
+        <p class="page-subtitle">Create your permanent admin password</p>
+
+        <form action="{{ url_for('users.admin_login') }}" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="form-group">
+            <label class="form-label">New Password</label>
+            <div class="password-wrapper">
+              <input type="password" id="password" name="new_password" class="form-control" placeholder="At least 8 characters" required autofocus minlength="8">
+              <span class="toggle-password" id="togglePasswordBtn">Show</span>
+            </div>
+          </div>
+          <button type="submit" class="btn-primary btn-admin">
+            Save & Login <i class="fas fa-arrow-right"></i>
+          </button>
+        </form>
+
+        {% endif %}
+
+        <div class="divider">or</div>
+        
+        <div style="margin-top: 25px; text-align: center;">
+          <a href="{{ url_for('users.user_login') }}" style="font-size: 13px; color: var(--text-muted); text-decoration: none; font-weight: 600;">
+            <i class="fas fa-user"></i> Return to User Login
+          </a>
+        </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/auth/user_login.js') }}"></script>
+</body>
+</html>

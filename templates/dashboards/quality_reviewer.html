@@ -1,405 +1,15 @@
 {% extends 'dashboards/base.html' %}
-{% block title %}Tasker Dashboard{% endblock %}
-
-{% block extra_css %}
-<style>
-.attendance-card {
-    background: linear-gradient(135deg, #1a1d2e 0%, #2d3155 100%);
-    border-radius: var(--radius);
-    padding: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-    margin-bottom: 24px;
-    box-shadow: var(--shadow-lg);
-    position: relative;
-    overflow: hidden;
-}
-.attendance-card::before {
-    content: '';
-    position: absolute;
-    top: -40px; right: -40px;
-    width: 140px; height: 140px;
-    background: rgba(79,110,247,0.12);
-    border-radius: 50%;
-}
-.attendance-left { flex: 1; }
-.attendance-title {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: rgba(255,255,255,0.5);
-    margin-bottom: 6px;
-}
-.attendance-time {
-    font-size: 32px;
-    font-weight: 800;
-    color: #fff;
-    font-family: var(--font-mono);
-    letter-spacing: -0.02em;
-    line-height: 1;
-}
-.attendance-date {
-    font-size: 12px;
-    color: rgba(255,255,255,0.45);
-    margin-top: 4px;
-}
-.attendance-status {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 12px;
-}
-.punch-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: #ef4444;
-    flex-shrink: 0;
-}
-.punch-dot.active {
-    background: #22c55e;
-    box-shadow: 0 0 0 3px rgba(34,197,94,0.25);
-    animation: pulse-dot 2s infinite;
-}
-@keyframes pulse-dot {
-    0%, 100% { box-shadow: 0 0 0 3px rgba(34,197,94,0.25); }
-    50% { box-shadow: 0 0 0 6px rgba(34,197,94,0.1); }
-}
-.punch-status-text {
-    font-size: 12px;
-    font-weight: 600;
-    color: rgba(255,255,255,0.7);
-}
-.punch-info {
-    font-size: 11px;
-    color: rgba(255,255,255,0.4);
-    margin-top: 2px;
-}
-.attendance-right {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    align-items: flex-end;
-    flex-shrink: 0;
-}
-.btn-punch {
-    padding: 12px 24px;
-    border: none;
-    border-radius: var(--radius-sm);
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.2s;
-    letter-spacing: 0.02em;
-    min-width: 130px;
-}
-.btn-punch-in {
-    background: #22c55e;
-    color: #fff;
-}
-.btn-punch-in:hover { background: #16a34a; transform: translateY(-1px); }
-.btn-punch-out {
-    background: #ef4444;
-    color: #fff;
-}
-.btn-punch-out:hover { background: #dc2626; transform: translateY(-1px); }
-.btn-punch:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-.working-time {
-    font-size: 11px;
-    color: rgba(255,255,255,0.4);
-    font-family: var(--font-mono);
-    text-align: right;
-}
-
-.attend-history {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-    margin-top: 0;
-}
-.attend-history-header {
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--border);
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--text);
-}
-.attend-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr;
-    gap: 8px;
-    padding: 12px 20px;
-    border-bottom: 1px solid var(--border);
-    font-size: 12px;
-    align-items: center;
-}
-.attend-row:last-child { border-bottom: none; }
-.attend-row.head {
-    background: var(--surface2);
-    font-weight: 700;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-muted);
-}
-.attend-hours {
-    font-weight: 700;
-    color: var(--accent);
-    font-family: var(--font-mono);
-}
-
-.modal-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.6);
-    z-index: 999;
-    backdrop-filter: blur(4px);
-    align-items: center;
-    justify-content: center;
-}
-.modal-overlay.show { display: flex; }
-.modal-box {
-    background: var(--surface);
-    border-radius: var(--radius);
-    width: 90%;
-    max-width: 540px;
-    max-height: 90vh;
-    overflow-y: auto;
-    box-shadow: var(--shadow-lg);
-    animation: modalIn 0.25s ease;
-}
-@keyframes modalIn {
-    from { opacity: 0; transform: scale(0.95) translateY(10px); }
-    to { opacity: 1; transform: scale(1) translateY(0); }
-}
-.modal-header {
-    padding: 20px 24px 16px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-.modal-title { font-size: 15px; font-weight: 700; }
-.modal-close {
-    width: 32px; height: 32px;
-    border: none;
-    background: var(--surface2);
-    border-radius: var(--radius-xs);
-    cursor: pointer;
-    font-size: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-muted);
-    transition: all 0.15s;
-}
-.modal-close:hover { background: var(--error-light); color: var(--error); }
-.modal-body { padding: 20px 24px; }
-.modal-footer {
-    padding: 16px 24px;
-    border-top: 1px solid var(--border);
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-}
-.form-group { margin-bottom: 16px; }
-.form-label {
-    display: block;
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-muted);
-    margin-bottom: 6px;
-}
-.form-input {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1.5px solid var(--border);
-    border-radius: var(--radius-xs);
-    font-family: var(--font);
-    font-size: 13px;
-    background: var(--surface);
-    color: var(--text);
-    transition: border-color 0.15s;
-    outline: none;
-}
-.form-input:focus { border-color: var(--accent); }
-
-.screenshot-zone {
-    border: 2px dashed var(--border);
-    border-radius: var(--radius-sm);
-    padding: 20px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    background: var(--surface2);
-    margin-top: 6px;
-}
-.screenshot-zone:hover { border-color: var(--accent); background: var(--accent-light); }
-.screenshot-zone.has-file {
-    border-color: var(--success);
-    background: var(--success-light);
-}
-.screenshot-zone-icon { font-size: 24px; margin-bottom: 6px; }
-.screenshot-zone-text { font-size: 12px; color: var(--text-muted); }
-.screenshot-zone-name { font-size: 12px; font-weight: 600; color: var(--success); margin-top: 4px; }
-
-.step-flow {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 20px;
-}
-.step-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-dim);
-}
-.step-item.active { color: var(--accent); }
-.step-item.done { color: var(--success); }
-.step-num {
-    width: 22px; height: 22px;
-    border-radius: 50%;
-    border: 2px solid currentColor;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 10px;
-    flex-shrink: 0;
-}
-.step-divider { flex: 1; height: 1px; background: var(--border); }
-
-.task-submit-preview {
-    background: var(--surface2);
-    border-radius: var(--radius-sm);
-    padding: 12px 16px;
-    margin-bottom: 16px;
-    border-left: 3px solid var(--accent);
-}
-.task-submit-preview .tsp-title { font-size: 13px; font-weight: 700; }
-.task-submit-preview .tsp-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
-
-.btn { padding: 10px 20px; border: none; border-radius: var(--radius-xs); font-family: var(--font); font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
-.btn-primary { background: var(--accent); color: #fff; }
-.btn-primary:hover { background: var(--accent-hover); }
-.btn-secondary { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
-.btn-secondary:hover { background: var(--border); }
-
-.reviewed-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 3px 8px;
-    border-radius: 20px;
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-.reviewed-badge.approved { background: var(--success-light); color: #15803d; }
-.reviewed-badge.rejected { background: var(--error-light); color: #dc2626; }
-
-.review-note-box {
-    background: var(--warning-light);
-    border: 1px solid #fde68a;
-    border-radius: var(--radius-xs);
-    padding: 8px 12px;
-    font-size: 11px;
-    color: #92400e;
-    margin-top: 4px;
-}
-
-.people-row {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-bottom: 16px;
-}
-.person-chip {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    font-size: 12px;
-}
-.person-avatar-sm {
-    width: 28px; height: 28px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 11px;
-    color: #fff;
-    flex-shrink: 0;
-}
-.person-avatar-sm.pl { background: linear-gradient(135deg, #f59e0b, #ef4444); }
-.person-avatar-sm.qr { background: linear-gradient(135deg, #8b5cf6, #ec4899); }
-.person-name { font-weight: 600; color: var(--text); }
-.person-role-tag { font-size: 10px; color: var(--text-muted); }
-</style>
-{% endblock %}
+{% block title %}Quality Reviewer Dashboard{% endblock %}
 
 {% block content %}
 <div class="dashboard-wrapper">
-
     <div class="dashboard-header">
         <div class="header-left">
-            <span class="role-chip">⚡ Tasker</span>
+            <span class="role-chip">🔍 Quality Reviewer</span>
             <h1 class="dash-title">Welcome back, <strong>{{ user.username }}</strong></h1>
-            <p class="dash-subtitle">{{ user.job_title or 'Tasker' }} &mdash; Your tasks and progress</p>
-        </div>
-        <div class="header-right">
-            <a href="{{ url_for('users.profile') }}" class="avatar-circle" title="View Profile" style="text-decoration:none;cursor:pointer;">{{ user.username[0].upper() }}</a>
+            <p class="dash-subtitle">{{ user.job_title or 'Quality Reviewer' }} &mdash; ID: {{ user.user_code }}</p>
         </div>
     </div>
-
-    {% if dashboard.pl_list or dashboard.qr_list %}
-    <div class="dash-card" style="margin-bottom:20px;">
-        <div class="card-header"><span class="card-title">Your Team</span></div>
-        <div class="card-body">
-            {% if dashboard.pl_list %}
-            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:8px;">Project Leads</div>
-            <div class="people-row">
-                {% for pl in dashboard.pl_list %}
-                <div class="person-chip">
-                    <div class="person-avatar-sm pl">{{ pl.username[0].upper() }}</div>
-                    <div>
-                        <div class="person-name">{{ pl.username }}</div>
-                        <div class="person-role-tag">🎯 {{ pl.job_title or 'Project Lead' }}</div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-            {% if dashboard.qr_list %}
-            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:8px;margin-top:12px;">Quality Reviewers</div>
-            <div class="people-row">
-                {% for qr in dashboard.qr_list %}
-                <div class="person-chip">
-                    <div class="person-avatar-sm qr">{{ qr.username[0].upper() }}</div>
-                    <div>
-                        <div class="person-name">{{ qr.username }}</div>
-                        <div class="person-role-tag">🔍 {{ qr.job_title or 'Quality Reviewer' }}</div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-        </div>
-    </div>
-    {% endif %}
 
     <div class="attendance-card" id="attendanceCard">
         <div class="attendance-left">
@@ -415,479 +25,124 @@
             </div>
         </div>
         <div class="attendance-right">
-            <button class="btn-punch btn-punch-in" id="btnPunchIn" onclick="doPunchIn()">
-                <i class="fas fa-sign-in-alt" style="margin-right:6px;"></i>Punch In
+            <button class="btn-punch btn-punch-in" id="btnPunchIn">
+                <i class="fas fa-sign-in-alt mr-6"></i>Punch In
             </button>
-            <button class="btn-punch btn-punch-out" id="btnPunchOut" onclick="doPunchOut()" style="display:none;">
-                <i class="fas fa-sign-out-alt" style="margin-right:6px;"></i>Punch Out
+            <button class="btn-punch btn-punch-out hide" id="btnPunchOut">
+                <i class="fas fa-sign-out-alt mr-6"></i>Punch Out
             </button>
             <div class="working-time" id="workingTimeDisplay"></div>
         </div>
     </div>
 
-    {% if dashboard.attendance and dashboard.attendance.history %}
-    <div class="attend-history" style="margin-bottom:24px;">
-        <div class="attend-history-header">📅 Attendance History (Last 7 Days)</div>
-        <div class="attend-row head">
-            <span>Date</span><span>Punch In</span><span>Punch Out</span><span>Hours</span>
+    {% if dashboard.pl_info %}
+    <div class="dash-card mb-20">
+        <div class="card-header">Reporting To</div>
+        <div class="card-body">
+            <div class="person-chip chip-auto">
+                <div class="person-avatar-sm pl">{{ dashboard.pl_info.username[0].upper() }}</div>
+                <div>
+                    <div class="person-name">{{ dashboard.pl_info.username }} {% if dashboard.pl_info.is_live %}<span class="live-indicator">● Live</span>{% endif %}</div>
+                    <div class="person-role-tag">Project Lead | {{ dashboard.pl_info.user_code }}</div>
+                </div>
+            </div>
         </div>
-        {% for h in dashboard.attendance.history %}
-        <div class="attend-row">
-            <span>{{ h.work_date }}</span>
-            <span>{{ h.punch_in }}</span>
-            <span>{{ h.punch_out }}</span>
-            <span class="attend-hours">{{ h.hours_display }}</span>
+    </div>
+    {% endif %}
+
+    {% if dashboard.tasker_list %}
+    <div class="dash-card mb-20">
+        <div class="card-header">Your Assigned Taskers</div>
+        <div class="card-body">
+            <div class="people-row">
+                {% for t in dashboard.tasker_list %}
+                <div class="person-chip chip-auto">
+                    <div class="person-avatar-sm tasker">{{ t.username[0].upper() }}</div>
+                    <div>
+                        <div class="person-name">{{ t.username }} {% if t.is_live %}<span class="live-indicator">● Live</span>{% endif %}</div>
+                        <div class="person-role-tag">Tasker | {{ t.user_code }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
         </div>
-        {% endfor %}
     </div>
     {% endif %}
 
     <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-icon">📌</div>
-            <div class="stat-body">
-                <div class="stat-value">{{ dashboard.assigned_tasks or 0 }}</div>
-                <div class="stat-label">Assigned Tasks</div>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon">🚀</div>
-            <div class="stat-body">
-                <div class="stat-value">{{ dashboard.in_progress or 0 }}</div>
-                <div class="stat-label">In Progress</div>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon">✅</div>
-            <div class="stat-body">
-                <div class="stat-value">{{ dashboard.completed or 0 }}</div>
-                <div class="stat-label">Completed</div>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon">⚠️</div>
-            <div class="stat-body">
-                <div class="stat-value">{{ dashboard.overdue or 0 }}</div>
-                <div class="stat-label">Overdue</div>
-            </div>
-        </div>
+        <div class="stat-card"><div class="stat-value">{{ dashboard.pending_reviews or 0 }}</div><div class="stat-label">Pending Reviews</div></div>
+        <div class="stat-card"><div class="stat-value">{{ dashboard.approved_today or 0 }}</div><div class="stat-label">Approved Today</div></div>
+        <div class="stat-card"><div class="stat-value">{{ dashboard.sent_back or 0 }}</div><div class="stat-label">Sent Back</div></div>
+        <div class="stat-card"><div class="stat-value">{{ dashboard.approval_rate or 0 }}%</div><div class="stat-label">Approval Rate</div></div>
     </div>
 
     <div class="dash-grid-2col">
         <div class="dash-card">
-            <div class="card-header">
-                <span class="card-title">My Active Tasks</span>
-            </div>
+            <div class="card-header"><span class="card-title">Needs Review</span></div>
             <div class="card-body">
-                {% if dashboard.my_tasks %}
-                    {% for task in dashboard.my_tasks %}
-                    <div class="task-row">
-                        <div class="task-info">
-                            <div class="task-title">{{ task.title }}</div>
-                            <div class="task-meta">{{ task.project or 'No project' }} &bull; Due {{ task.due_date or 'N/A' }}</div>
-                            {% if task.status == 'rejected' and task.review_note %}
-                            <div class="review-note-box">💬 {{ task.review_note }}</div>
-                            {% endif %}
-                        </div>
-                        <span class="badge priority-{{ task.priority | lower }}">{{ task.priority }}</span>
-                    </div>
-                    {% endfor %}
+                {% if dashboard.review_queue %}
+                    <table class="dash-table">
+                        <thead><tr><th>Task</th><th>Submitted By</th><th>Action</th></tr></thead>
+                        <tbody>
+                            {% for item in dashboard.review_queue %}
+                            <tr>
+                                <td>{{ item.title }}</td>
+                                <td>{{ item.submitted_by }}</td>
+                                <td><button class="btn btn-primary btn-open-review" data-task-id="{{ item.id }}" data-task-title="{{ item.title|e }}">Review</button></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 {% else %}
-                    <div class="empty-state">No active tasks.</div>
+                    <div class="empty-state">Review queue is empty. Great job!</div>
                 {% endif %}
             </div>
         </div>
 
         <div class="dash-card">
-            <div class="card-header">
-                <span class="card-title">Activity Feed</span>
-            </div>
+            <div class="card-header"><span class="card-title">Recent Decisions</span></div>
             <div class="card-body">
-                {% if dashboard.activity %}
-                    {% for item in dashboard.activity %}
-                    <div class="activity-row">
-                        <div class="activity-dot {{ item.type }}"></div>
-                        <div class="activity-text">
-                            <span class="activity-msg">{{ item.message }}</span>
-                            <span class="activity-time">{{ item.time }}</span>
-                        </div>
-                    </div>
-                    {% endfor %}
+                {% if dashboard.recent_decisions %}
+                    <table class="dash-table">
+                        <tbody>
+                            {% for item in dashboard.recent_decisions %}
+                            <tr>
+                                <td>{{ item.task_title }}</td>
+                                <td><span class="badge status-{{ item.decision | lower }}">{{ item.decision }}</span></td>
+                                <td class="text-right">{{ item.time }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 {% else %}
-                    <div class="empty-state">No recent activity.</div>
+                    <div class="empty-state">No recent decisions.</div>
                 {% endif %}
             </div>
         </div>
     </div>
-
-    <div class="dash-card" style="margin-top: 20px;">
-        <div class="card-header">
-            <span class="card-title">All Assigned Tasks</span>
-        </div>
-        <div class="card-body">
-            {% if dashboard.all_tasks %}
-            <table class="dash-table">
-                <thead>
-                    <tr>
-                        <th>Task</th>
-                        <th>Project</th>
-                        <th>Priority</th>
-                        <th>Status</th>
-                        <th>Due Date</th>
-                        <th>Reviewed By</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for task in dashboard.all_tasks %}
-                    <tr>
-                        <td>{{ task.title }}</td>
-                        <td>{{ task.project or '—' }}</td>
-                        <td><span class="badge priority-{{ task.priority | lower }}">{{ task.priority }}</span></td>
-                        <td><span class="badge status-{{ task.status | lower | replace(' ', '-') }}">{{ task.status }}</span></td>
-                        <td>{{ task.due_date or '—' }}</td>
-                        <td>
-                            {% if task.reviewed_by_name %}
-                            <span class="reviewed-badge {{ task.status }}">
-                                🔍 {{ task.reviewed_by_name }}
-                            </span>
-                            {% else %}—{% endif %}
-                        </td>
-                        <td>
-                            {% if task.status in ['pending', 'in_progress', 'rejected'] %}
-                            <a href="#" class="btn-action btn-submit" onclick="openSubmitModal({{ task.id }}, '{{ task.title|e }}', '{{ task.project or '' }}')">Submit</a>
-                            {% elif task.status == 'submitted' %}
-                            <span class="text-muted">Pending Review</span>
-                            {% elif task.status in ['approved', 'completed'] %}
-                            <span style="color:var(--success);font-weight:600;">✓ Done</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            {% else %}
-                <div class="empty-state">No tasks found.</div>
-            {% endif %}
-        </div>
-    </div>
-
 </div>
 
-<div class="modal-overlay" id="submitModal">
+<div class="modal-overlay" id="reviewModal">
     <div class="modal-box">
         <div class="modal-header">
-            <span class="modal-title">📤 Submit Task</span>
-            <button class="modal-close" onclick="closeSubmitModal()">✕</button>
+            <span class="modal-title">🔍 Review Task</span>
+            <button class="modal-close btn-close-review-modal">✕</button>
         </div>
         <div class="modal-body">
-            <div class="task-submit-preview">
-                <div class="tsp-title" id="modalTaskTitle"></div>
-                <div class="tsp-meta" id="modalTaskProject"></div>
+            <input type="hidden" id="reviewTaskId">
+            <h4 id="reviewTaskTitle" class="mb-16 font-bold"></h4>
+            <div class="form-group">
+                <label class="form-label">Review Note / Rework Instructions</label>
+                <textarea class="form-control" id="reviewNote" rows="4"></textarea>
             </div>
-
-            <div class="step-flow">
-                <div class="step-item active" id="step1">
-                    <div class="step-num">1</div><span>Start</span>
-                </div>
-                <div class="step-divider"></div>
-                <div class="step-item" id="step2">
-                    <div class="step-num">2</div><span>End</span>
-                </div>
-                <div class="step-divider"></div>
-                <div class="step-item" id="step3">
-                    <div class="step-num">3</div><span>Submit</span>
-                </div>
-            </div>
-
-            <div id="submitStep1">
-                <div class="form-group">
-                    <label class="form-label">Start Screenshot</label>
-                    <div class="screenshot-zone" id="startZone" onclick="document.getElementById('startFile').click()">
-                        <div class="screenshot-zone-icon">📸</div>
-                        <div class="screenshot-zone-text">Click to upload start screenshot</div>
-                        <div class="screenshot-zone-name" id="startFileName" style="display:none;"></div>
-                    </div>
-                    <input type="file" id="startFile" accept="image/*" style="display:none;" onchange="handleStartFile(this)">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Start Time</label>
-                    <input type="datetime-local" class="form-input" id="startTimeInput">
-                </div>
-                <button class="btn btn-primary" style="width:100%;" onclick="goToStep2()">Continue →</button>
-            </div>
-
-            <div id="submitStep2" style="display:none;">
-                <div class="form-group">
-                    <label class="form-label">End Screenshot</label>
-                    <div class="screenshot-zone" id="endZone" onclick="document.getElementById('endFile').click()">
-                        <div class="screenshot-zone-icon">📸</div>
-                        <div class="screenshot-zone-text">Click to upload end screenshot</div>
-                        <div class="screenshot-zone-name" id="endFileName" style="display:none;"></div>
-                    </div>
-                    <input type="file" id="endFile" accept="image/*" style="display:none;" onchange="handleEndFile(this)">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">End Time</label>
-                    <input type="datetime-local" class="form-input" id="endTimeInput">
-                </div>
-                <div style="display:flex;gap:10px;">
-                    <button class="btn btn-secondary" onclick="goToStep1()">← Back</button>
-                    <button class="btn btn-primary" style="flex:1;" onclick="goToStep3()">Review →</button>
-                </div>
-            </div>
-
-            <div id="submitStep3" style="display:none;">
-                <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:16px;margin-bottom:16px;">
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:12px;">
-                        <div>
-                            <div style="color:var(--text-muted);margin-bottom:2px;">Start Time</div>
-                            <div style="font-weight:600;" id="reviewStartTime">—</div>
-                        </div>
-                        <div>
-                            <div style="color:var(--text-muted);margin-bottom:2px;">End Time</div>
-                            <div style="font-weight:600;" id="reviewEndTime">—</div>
-                        </div>
-                        <div>
-                            <div style="color:var(--text-muted);margin-bottom:2px;">Start Screenshot</div>
-                            <div style="font-weight:600;color:var(--success);" id="reviewStartFile">—</div>
-                        </div>
-                        <div>
-                            <div style="color:var(--text-muted);margin-bottom:2px;">End Screenshot</div>
-                            <div style="font-weight:600;color:var(--success);" id="reviewEndFile">—</div>
-                        </div>
-                    </div>
-                    <div id="durationDisplay" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:13px;font-weight:700;color:var(--accent);"></div>
-                </div>
-                <div style="display:flex;gap:10px;">
-                    <button class="btn btn-secondary" onclick="goToStep2()">← Back</button>
-                    <button class="btn btn-primary" style="flex:1;background:var(--success);" id="btnFinalSubmit" onclick="finalSubmit()">
-                        <i class="fas fa-paper-plane" style="margin-right:6px;"></i>Submit Task
-                    </button>
-                </div>
-            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary btn-submit-review text-error border-error" data-decision="reject">Reject / Rework</button>
+            <button class="btn btn-primary btn-submit-review bg-success" data-decision="approve">Approve Task</button>
         </div>
     </div>
 </div>
-
 {% endblock %}
 
 {% block extra_js %}
-<script>
-const attendanceData = {{ dashboard.attendance | tojson }};
-let punchInTime = null;
-let workTimer = null;
-let currentTaskId = null;
-let startFileB64 = '';
-let endFileB64 = '';
-
-function updateClock() {
-    const now = new Date();
-    document.getElementById('liveTime').textContent = now.toLocaleTimeString('en-IN', {hour12: false});
-    document.getElementById('liveDate').textContent = now.toLocaleDateString('en-IN', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
-}
-setInterval(updateClock, 1000);
-updateClock();
-
-function updateAttendanceUI(data) {
-    const dot = document.getElementById('punchDot');
-    const statusText = document.getElementById('punchStatusText');
-    const infoText = document.getElementById('punchInfo');
-    const btnIn = document.getElementById('btnPunchIn');
-    const btnOut = document.getElementById('btnPunchOut');
-    const workDisplay = document.getElementById('workingTimeDisplay');
-
-    if (data.is_punched_in) {
-        dot.classList.add('active');
-        statusText.textContent = 'Currently Working';
-        infoText.textContent = 'Punched in at ' + (data.punch_in || '');
-        btnIn.style.display = 'none';
-        btnOut.style.display = 'block';
-        punchInTime = data.punch_in;
-        startWorkTimer(data.punch_in);
-    } else {
-        dot.classList.remove('active');
-        if (data.punch_out) {
-            statusText.textContent = 'Shift Complete';
-            infoText.textContent = data.punch_in + ' → ' + data.punch_out;
-            const mins = data.total_minutes || 0;
-            workDisplay.textContent = 'Worked: ' + Math.floor(mins/60) + 'h ' + (mins%60) + 'm';
-        } else {
-            statusText.textContent = 'Not Punched In';
-            infoText.textContent = 'Start your shift by punching in';
-        }
-        btnIn.style.display = 'block';
-        btnOut.style.display = 'none';
-        if (workTimer) clearInterval(workTimer);
-    }
-}
-
-function startWorkTimer(punchInStr) {
-    if (workTimer) clearInterval(workTimer);
-    function tick() {
-        const now = new Date();
-        const today = now.toISOString().split('T')[0];
-        const startParts = punchInStr.split(':');
-        const start = new Date(today + 'T' + punchInStr);
-        const diffMs = now - start;
-        if (diffMs < 0) return;
-        const totalSecs = Math.floor(diffMs / 1000);
-        const hrs = Math.floor(totalSecs / 3600);
-        const mins = Math.floor((totalSecs % 3600) / 60);
-        const secs = totalSecs % 60;
-        document.getElementById('workingTimeDisplay').textContent =
-            'Working: ' + String(hrs).padStart(2,'0') + ':' + String(mins).padStart(2,'0') + ':' + String(secs).padStart(2,'0');
-    }
-    tick();
-    workTimer = setInterval(tick, 1000);
-}
-
-async function doPunchIn() {
-    const btn = document.getElementById('btnPunchIn');
-    btn.disabled = true;
-    btn.textContent = 'Punching in...';
-    try {
-        const res = await csrfFetch('/api/attendance/punch-in', {method:'POST', headers:{'Content-Type':'application/json'}});
-        const data = await res.json();
-        if (data.status === 'ok' || data.status === 'already_punched_in') {
-            updateAttendanceUI({is_punched_in: true, punch_in: data.punch_in, punch_out: null, total_minutes: 0});
-        }
-    } catch(e) {}
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-sign-in-alt" style="margin-right:6px;"></i>Punch In';
-}
-
-async function doPunchOut() {
-    const btn = document.getElementById('btnPunchOut');
-    btn.disabled = true;
-    btn.textContent = 'Punching out...';
-    try {
-        const res = await csrfFetch('/api/attendance/punch-out', {method:'POST', headers:{'Content-Type':'application/json'}});
-        const data = await res.json();
-        if (data.status === 'ok') {
-            updateAttendanceUI({is_punched_in: false, punch_in: data.punch_in, punch_out: data.punch_out, total_minutes: data.total_minutes});
-        }
-    } catch(e) {}
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-sign-out-alt" style="margin-right:6px;"></i>Punch Out';
-}
-
-updateAttendanceUI(attendanceData);
-
-function openSubmitModal(taskId, title, project) {
-    currentTaskId = taskId;
-    startFileB64 = ''; endFileB64 = '';
-    document.getElementById('modalTaskTitle').textContent = title;
-    document.getElementById('modalTaskProject').textContent = project || 'No project';
-    document.getElementById('startFileName').style.display = 'none';
-    document.getElementById('endFileName').style.display = 'none';
-    document.getElementById('startZone').classList.remove('has-file');
-    document.getElementById('endZone').classList.remove('has-file');
-    const now = new Date();
-    const local = new Date(now - now.getTimezoneOffset() * 60000).toISOString().slice(0,16);
-    document.getElementById('startTimeInput').value = local;
-    document.getElementById('endTimeInput').value = local;
-    goToStep1();
-    document.getElementById('submitModal').classList.add('show');
-}
-
-function closeSubmitModal() {
-    document.getElementById('submitModal').classList.remove('show');
-    currentTaskId = null;
-}
-
-function goToStep1() {
-    document.getElementById('submitStep1').style.display = 'block';
-    document.getElementById('submitStep2').style.display = 'none';
-    document.getElementById('submitStep3').style.display = 'none';
-    setStep(1);
-}
-function goToStep2() {
-    document.getElementById('submitStep1').style.display = 'none';
-    document.getElementById('submitStep2').style.display = 'block';
-    document.getElementById('submitStep3').style.display = 'none';
-    setStep(2);
-}
-function goToStep3() {
-    const startTime = document.getElementById('startTimeInput').value;
-    const endTime = document.getElementById('endTimeInput').value;
-    document.getElementById('reviewStartTime').textContent = startTime ? new Date(startTime).toLocaleString() : '—';
-    document.getElementById('reviewEndTime').textContent = endTime ? new Date(endTime).toLocaleString() : '—';
-    document.getElementById('reviewStartFile').textContent = startFileB64 ? '✓ Uploaded' : 'Not uploaded';
-    document.getElementById('reviewEndFile').textContent = endFileB64 ? '✓ Uploaded' : 'Not uploaded';
-    if (startTime && endTime) {
-        const diff = Math.max(0, (new Date(endTime) - new Date(startTime)) / 60000);
-        document.getElementById('durationDisplay').textContent = '⏱ Duration: ' + Math.floor(diff/60) + 'h ' + (diff%60) + 'm';
-    }
-    document.getElementById('submitStep1').style.display = 'none';
-    document.getElementById('submitStep2').style.display = 'none';
-    document.getElementById('submitStep3').style.display = 'block';
-    setStep(3);
-}
-function setStep(n) {
-    for (let i = 1; i <= 3; i++) {
-        const el = document.getElementById('step' + i);
-        el.className = 'step-item ' + (i < n ? 'done' : i === n ? 'active' : '');
-    }
-}
-
-function handleStartFile(input) {
-    if (!input.files[0]) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-        startFileB64 = e.target.result;
-        document.getElementById('startFileName').textContent = '✓ ' + input.files[0].name;
-        document.getElementById('startFileName').style.display = 'block';
-        document.getElementById('startZone').classList.add('has-file');
-    };
-    reader.readAsDataURL(input.files[0]);
-}
-function handleEndFile(input) {
-    if (!input.files[0]) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-        endFileB64 = e.target.result;
-        document.getElementById('endFileName').textContent = '✓ ' + input.files[0].name;
-        document.getElementById('endFileName').style.display = 'block';
-        document.getElementById('endZone').classList.add('has-file');
-    };
-    reader.readAsDataURL(input.files[0]);
-}
-
-async function finalSubmit() {
-    const btn = document.getElementById('btnFinalSubmit');
-    btn.disabled = true;
-    btn.textContent = 'Submitting...';
-    const startTime = document.getElementById('startTimeInput').value;
-    const endTime = document.getElementById('endTimeInput').value;
-    try {
-        const res = await csrfFetch('/api/task/submit', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                task_id: currentTaskId,
-                start_screenshot: startFileB64,
-                end_screenshot: endFileB64,
-                start_time: startTime,
-                end_time: endTime
-            })
-        });
-        const data = await res.json();
-        if (data.status === 'ok') {
-            closeSubmitModal();
-            location.reload();
-        } else {
-            alert('Submission failed. Please try again.');
-        }
-    } catch(e) {
-        alert('Network error. Please try again.');
-    }
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:6px;"></i>Submit Task';
-}
-
-document.getElementById('submitModal').addEventListener('click', function(e) {
-    if (e.target === this) closeSubmitModal();
-});
-</script>
 {% endblock %}

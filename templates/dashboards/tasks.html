@@ -1,0 +1,72 @@
+{% extends 'dashboards/base.html' %}
+{% block title %}All Tasks{% endblock %}
+{% block breadcrumb %}Task Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    .task-filters { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+    .task-search { flex: 1; min-width: 250px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+    <div class="dashboard-header">
+        <h1 class="dash-title">All Tasks</h1>
+        <p class="dash-subtitle">Manage, search, and filter your complete task list.</p>
+    </div>
+
+    <div class="task-filters">
+        <div class="task-search">
+            <input type="text" class="form-input" placeholder="Search tasks by name or project...">
+        </div>
+        <select class="form-select" style="width: auto;">
+            <option value="">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="in_progress">In Progress</option>
+            <option value="submitted">Submitted (Review)</option>
+            <option value="completed">Completed</option>
+        </select>
+        <select class="form-select" style="width: auto;">
+            <option value="">All Priorities</option>
+            <option value="high">High & Critical</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+        </select>
+        <button class="btn btn-primary"><i class="fas fa-search"></i> Search</button>
+    </div>
+
+    <div class="dash-card">
+        <div class="card-body" style="padding: 0;">
+            {% if tasks %}
+            <table class="dash-table" style="margin: 0; width: 100%;">
+                <thead>
+                    <tr>
+                        <th>Task Name</th>
+                        <th>Project</th>
+                        <th>Priority</th>
+                        <th>Status</th>
+                        <th>Due Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in tasks %}
+                    <tr>
+                        <td style="font-weight: 600;">{{ task.title }}</td>
+                        <td>{{ task.project or 'No Project' }}</td>
+                        <td><span class="badge priority-{{ task.priority | lower }}">{{ task.priority }}</span></td>
+                        <td><span class="badge status-{{ task.status | lower | replace(' ', '-') }}">{{ task.status }}</span></td>
+                        <td>{{ task.due_date or '—' }}</td>
+                        <td><button class="btn btn-secondary btn-action text-12">Details</button></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state">You have no tasks assigned to you.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

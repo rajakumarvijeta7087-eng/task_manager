@@ -1,0 +1,101 @@
+.assign-fab {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(79, 110, 247, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    transition: transform 0.2s ease;
+}
+.assign-fab:hover {
+    transform: scale(1.05);
+}
+
+/* Modals specific to PL */
+.assign-type-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 16px;
+}
+.assign-type-tab {
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    border-radius: var(--radius-xs);
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 12px;
+    transition: all 0.2s ease;
+}
+.assign-type-tab:hover {
+    background: var(--border);
+}
+.assign-type-tab.active {
+    background: var(--accent-light);
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Project Progress Rows */
+.project-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+}
+.project-row:last-child {
+    border-bottom: none;
+}
+.project-info {
+    flex: 1;
+}
+.project-name {
+    font-weight: 600;
+    margin-bottom: 4px;
+    font-size: 14px;
+    color: var(--text);
+}
+.project-meta {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+.progress-wrap {
+    width: 120px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.progress-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--surface2);
+    border-radius: 3px;
+    overflow: hidden;
+}
+.progress-fill {
+    height: 100%;
+    background: var(--success);
+    border-radius: 3px;
+    transition: width 0.4s ease;
+}
+.progress-pct {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    width: 30px;
+    text-align: right;
+}
