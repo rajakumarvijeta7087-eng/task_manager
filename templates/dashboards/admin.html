@@ -5,9 +5,21 @@
 <style>
     .admin-section { display: none; }
     .admin-section.active { display: block; }
-    .admin-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid var(--border); }
-    .admin-tab { padding: 10px 20px; cursor: pointer; font-weight: 600; color: var(--text-muted); border-bottom: 2px solid transparent; margin-bottom: -2px; }
+    .admin-tabs { display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--border); overflow-x: auto; padding-bottom: 4px; }
+    .admin-tab { padding: 12px 20px; cursor: pointer; font-weight: 600; font-size: 14px; color: var(--text-muted); border-bottom: 2px solid transparent; transition: all 0.2s ease; white-space: nowrap; }
+    .admin-tab:hover { color: var(--text); }
     .admin-tab.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
+    .email-workspace { display: grid; grid-template-columns: 280px 1fr; gap: 24px; align-items: start; }
+    .template-selector-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+    .template-option { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 10px; cursor: pointer; transition: all 0.2s ease; font-size: 13px; font-weight: 500; }
+    .template-option:hover { border-color: var(--primary); background: rgba(var(--primary-rgb), 0.05); }
+    .template-option i { font-size: 16px; color: var(--text-muted); }
+    .template-option.active { border-color: var(--primary); background: rgba(var(--primary-rgb), 0.1); color: var(--primary); }
+    .template-option.active i { color: var(--primary); }
+    .meta-input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .email-editor-container { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
+    .email-editor-header { background: var(--surface2); border-bottom: 1px solid var(--border); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; }
+    .email-preview-badge { font-size: 11px; background: var(--border); padding: 4px 8px; border-radius: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
 </style>
 {% endblock %}
 
@@ -15,36 +27,43 @@
 <div class="dashboard-wrapper">
     <div class="dashboard-header">
         <div class="header-left">
-            <span class="role-chip" style="background:#ef4444;color:#fff;">👑 System Admin</span>
+            <span class="role-chip" style="background:#ef4444; color:#fff;">👑 System Admin</span>
             <h1 class="dash-title">Admin Console</h1>
             <p class="dash-subtitle">ID: {{ user.user_code }}</p>
         </div>
     </div>
 
     <div class="stats-grid mb-24">
-        <div class="stat-card"><div class="stat-value">{{ dashboard.users_count }}</div><div class="stat-label">Total Users</div></div>
-        <div class="stat-card"><div class="stat-value">{{ dashboard.tasks_count }}</div><div class="stat-label">Total Tasks</div></div>
+        <div class="stat-card">
+            <div class="stat-value">{{ dashboard.users_count }}</div>
+            <div class="stat-label">Total Users</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ dashboard.tasks_count }}</div>
+            <div class="stat-label">Total Tasks</div>
+        </div>
     </div>
 
     <div class="admin-tabs">
-        <div class="admin-tab active" data-target="sec-pl">Project Leads</div>
-        <div class="admin-tab" data-target="sec-qr">Quality Reviewers</div>
-        <div class="admin-tab" data-target="sec-tk">Taskers</div>
-        <div class="admin-tab" data-target="sec-add">Quick Add</div>
-        <div class="admin-tab" data-target="sec-mail">Email Tools</div>
-        <div class="admin-tab" data-target="sec-settings">Settings</div>
+        <div class="admin-tab active" data-target="sec-pl"><i class="fas fa-user-tie mr-6"></i> Project Leads</div>
+        <div class="admin-tab" data-target="sec-qr"><i class="fas fa-user-check mr-6"></i> Quality Reviewers</div>
+        <div class="admin-tab" data-target="sec-tk"><i class="fas fa-users mr-6"></i> Taskers</div>
+        <div class="admin-tab" data-target="sec-add"><i class="fas fa-user-plus mr-6"></i> Quick Add</div>
+        <div class="admin-tab" data-target="sec-mail"><i class="fas fa-paper-plane mr-6"></i> Email Tools</div>
+        <div class="admin-tab" data-target="sec-settings"><i class="fas fa-sliders mr-6"></i> Settings</div>
     </div>
 
     <div id="sec-pl" class="admin-section active dash-card">
-        <div class="card-header"><span class="card-title">Project Leads</span></div>
+        <div class="card-header"><span class="card-title">Project Leads Management</span></div>
         <div class="card-body" style="padding: 0;">
             <table class="dash-table" style="margin: 0; width: 100%;">
-                <thead><tr><th>Name</th><th>Email</th><th>Live</th><th>Action</th></tr></thead>
+                <thead><tr><th>Name</th><th>Email</th><th>Live Status</th><th>Action</th></tr></thead>
                 <tbody>
                     {% for u in dashboard.pl_users %}
                     <tr>
-                        <td>{{ u.username }}</td><td>{{ u.email }}</td>
-                        <td>{% if u.is_live %}<span style="color:var(--success);">● Live</span>{% else %}<span class="text-muted">Offline</span>{% endif %}</td>
+                        <td><strong>{{ u.username }}</strong></td>
+                        <td>{{ u.email }}</td>
+                        <td>{% if u.is_live %}<span style="color:var(--success); font-weight:600;">● Live</span>{% else %}<span class="text-muted">Offline</span>{% endif %}</td>
                         <td>
                             <button class="btn btn-action btn-secondary btn-del-user text-error border-error" data-id="{{ u.id }}">Delete</button>
                         </td>
@@ -56,15 +75,16 @@
     </div>
 
     <div id="sec-qr" class="admin-section dash-card">
-        <div class="card-header"><span class="card-title">Quality Reviewers</span></div>
+        <div class="card-header"><span class="card-title">Quality Reviewers Management</span></div>
         <div class="card-body" style="padding: 0;">
             <table class="dash-table" style="margin: 0; width: 100%;">
-                <thead><tr><th>Name</th><th>Email</th><th>Live</th><th>Action</th></tr></thead>
+                <thead><tr><th>Name</th><th>Email</th><th>Live Status</th><th>Action</th></tr></thead>
                 <tbody>
                     {% for u in dashboard.qr_users %}
                     <tr>
-                        <td>{{ u.username }}</td><td>{{ u.email }}</td>
-                        <td>{% if u.is_live %}<span style="color:var(--success);">● Live</span>{% else %}<span class="text-muted">Offline</span>{% endif %}</td>
+                        <td><strong>{{ u.username }}</strong></td>
+                        <td>{{ u.email }}</td>
+                        <td>{% if u.is_live %}<span style="color:var(--success); font-weight:600;">● Live</span>{% else %}<span class="text-muted">Offline</span>{% endif %}</td>
                         <td>
                             <button class="btn btn-action btn-secondary btn-del-user text-error border-error" data-id="{{ u.id }}">Delete</button>
                         </td>
@@ -76,15 +96,16 @@
     </div>
 
     <div id="sec-tk" class="admin-section dash-card">
-        <div class="card-header"><span class="card-title">Taskers</span></div>
+        <div class="card-header"><span class="card-title">Taskers Management</span></div>
         <div class="card-body" style="padding: 0;">
             <table class="dash-table" style="margin: 0; width: 100%;">
-                <thead><tr><th>Name</th><th>Email</th><th>Live</th><th>Action</th></tr></thead>
+                <thead><tr><th>Name</th><th>Email</th><th>Live Status</th><th>Action</th></tr></thead>
                 <tbody>
                     {% for u in dashboard.tk_users %}
                     <tr>
-                        <td>{{ u.username }}</td><td>{{ u.email }}</td>
-                        <td>{% if u.is_live %}<span style="color:var(--success);">● Live</span>{% else %}<span class="text-muted">Offline</span>{% endif %}</td>
+                        <td><strong>{{ u.username }}</strong></td>
+                        <td>{{ u.email }}</td>
+                        <td>{% if u.is_live %}<span style="color:var(--success); font-weight:600;">● Live</span>{% else %}<span class="text-muted">Offline</span>{% endif %}</td>
                         <td>
                             <button class="btn btn-action btn-secondary btn-del-user text-error border-error" data-id="{{ u.id }}">Delete</button>
                         </td>
@@ -96,13 +117,13 @@
     </div>
 
     <div id="sec-add" class="admin-section dash-card">
-        <div class="card-header"><span class="card-title">Quick Add User</span></div>
+        <div class="card-header"><span class="card-title">Quick Onboard Shell Account</span></div>
         <div class="card-body">
-            <p class="text-muted mb-16 text-12">Create a user instantly. They will be prompted to set their password upon their first login.</p>
+            <p class="text-muted mb-16 text-12">Create an optimized user identity entry without assigning passwords. Passwords will be handled passwordlessly upon initial login.</p>
             <div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" id="quickAddName" placeholder="John Doe"></div>
             <div class="form-group"><label class="form-label">Email Address</label><input type="email" class="form-input" id="quickAddEmail" placeholder="john@company.com"></div>
             <div class="form-group">
-                <label class="form-label">Role</label>
+                <label class="form-label">Role Profile</label>
                 <select class="form-select" id="quickAddRole">
                     <option value="tasker">Tasker</option>
                     <option value="quality_reviewer">Quality Reviewer</option>
@@ -113,25 +134,75 @@
         </div>
     </div>
 
-    <div id="sec-mail" class="admin-section dash-card">
-        <div class="card-header"><span class="card-title">Send Email</span></div>
-        <div class="card-body">
-            <div class="form-group"><label class="form-label">To Email</label><input type="email" class="form-input" id="mailTo"></div>
-            <div class="form-group"><label class="form-label">Subject</label><input type="text" class="form-input" id="mailSub"></div>
-            <div class="form-group"><label class="form-label">Message</label><textarea class="form-textarea" id="mailBody" rows="4"></textarea></div>
-            <button class="btn btn-primary" id="btnSendMail" style="width: 100%;">Send Email</button>
+    <div id="sec-mail" class="admin-section">
+        <div class="email-workspace">
+            
+            <div class="template-selector-card">
+                <h4 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600;">Email Blueprints</h4>
+                <p class="text-muted text-11 mb-16">Select a premade messaging module framework to pre-fill the layout canvas.</p>
+                
+                <div class="template-option active" data-type="custom">
+                    <i class="fas fa-pen-nib"></i>
+                    <span>Custom Broadcaster</span>
+                </div>
+                <div class="template-option" data-type="assignment">
+                    <i class="fas fa-clipboard-list"></i>
+                    <span>Task Assignment Notice</span>
+                </div>
+                <div class="template-option" data-type="review">
+                    <i class="fas fa-star-half-alt"></i>
+                    <span>Performance Review</span>
+                </div>
+                <div class="template-option" data-type="alert">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>System Critical Alert</span>
+                </div>
+            </div>
+
+            <div class="dash-card" style="margin: 0;">
+                <div class="card-header"><span class="card-title">Professional Email Hub</span></div>
+                <div class="card-body">
+                    
+                    <div class="meta-input-row">
+                        <div class="form-group">
+                            <label class="form-label">Recipient Address</label>
+                            <input type="email" class="form-input" id="mailTo" placeholder="recipient@domain.com">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Subject Headline</label>
+                            <input type="text" class="form-input" id="mailSub" placeholder="Enter formal subject title...">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Message Payload Box</label>
+                        <div class="email-editor-container">
+                            <div class="email-editor-header">
+                                <span style="font-size: 12px; font-weight: 500; color: var(--text-muted);">Plain-Text Formatting Layout Block</span>
+                                <span class="email-preview-badge">Active Sandbox</span>
+                            </div>
+                            <textarea class="form-textarea" id="mailBody" rows="10" style="border: none; border-radius: 0; padding: 16px; font-family: var(--font-mono); font-size: 13px; line-height: 1.6;" placeholder="Compose clear body statements here..."></textarea>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary" id="btnSendMail" style="width: 100%; height: 44px; font-size: 14px; font-weight: 600;">
+                        <i class="fas fa-paper-plane mr-6"></i> Broadcast Email Template
+                    </button>
+                </div>
+            </div>
+
         </div>
     </div>
 
     <div id="sec-settings" class="admin-section dash-card">
-        <div class="card-header"><span class="card-title">Security & Whitelist Settings</span></div>
+        <div class="card-header"><span class="card-title">Security & System Governance Settings</span></div>
         <div class="card-body">
             <div class="form-group">
                 <label class="form-label">Allowed Email Domains (comma separated)</label>
                 <input type="text" class="form-input" id="adminDomains" value="{{ dashboard.settings.get('allowed_domains', '') }}">
             </div>
             <div class="form-group">
-                <label class="form-label">Whitelist Mode</label>
+                <label class="form-label">Whitelist Mode Enforcement</label>
                 <select class="form-select" id="adminWlMode">
                     <option value="off" {% if dashboard.settings.get('whitelist_mode')=='off' %}selected{% endif %}>Off (Open Signup via Domain)</option>
                     <option value="on" {% if dashboard.settings.get('whitelist_mode')=='on' %}selected{% endif %}>On (Only Whitelisted Emails)</option>
@@ -149,4 +220,40 @@
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/dashboards/admin.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const templates = {
+        custom: {
+            subject: "",
+            body: ""
+        },
+        assignment: {
+            subject: "Notification: New Operational Project Assignment Block",
+            body: "Hello,\n\nA new execution sprint component has been registered under your operational directory workflow.\n\nPlease log in immediately to your dashboard workspace block to access project specifications, priority timelines, and mandatory attachment parameters.\n\nBest regards,\nOperational Governance Management"
+        },
+        review: {
+            subject: "Performance Review Matrix Assessment Notice",
+            body: "Hello,\n\nYour production execution performance metrics have been thoroughly analyzed across recent operational task reviews.\n\nPlease schedule a performance feedback review mapping segment with your associated Project Lead directly.\n\nBest regards,\nSystem Integrity Auditing Unit"
+        },
+        alert: {
+            subject: "CRITICAL: Mandatory System Infrastructure Update Notice",
+            body: "Urgent Warning Notice,\n\nOur underlying cloud database environment clusters will undergo short maintenance optimization scripts shortly.\n\nPlease confirm all production assets, local screenshots, and task logs are accurately synced to remote storage targets right now.\n\nBest regards,\nSystem Core Engineering Team"
+        }
+    };
+
+    document.querySelectorAll('.template-option').forEach(opt => {
+        opt.addEventListener('click', (e) => {
+            const element = e.currentTarget;
+            document.querySelectorAll('.template-option').forEach(t => t.classList.remove('active'));
+            element.classList.add('active');
+
+            const type = element.getAttribute('data-type');
+            if(templates[type]) {
+                document.getElementById('mailSub').value = templates[type].subject;
+                document.getElementById('mailBody').value = templates[type].body;
+            }
+        });
+    });
+});
+</script>
 {% endblock %}

@@ -4,7 +4,13 @@ import csv
 
 class UserOperation:
     def connection(self):
-        return mysql.connector.connect(host=Config.DATABASE_HOST, port=Config.DATABASE_PORT, user=Config.DATABASE_USER, password=Config.DATABASE_PASSWORD, database=Config.DATABASE_NAME)
+        return mysql.connector.connect(
+            host=Config.DATABASE_HOST, 
+            port=Config.DATABASE_PORT, 
+            user=Config.DATABASE_USER, 
+            password=Config.DATABASE_PASSWORD, 
+            database=Config.DATABASE_NAME
+        )
 
     def punch_in(self, user_id):
         db = cursor = None
@@ -14,7 +20,8 @@ class UserOperation:
             cursor.execute("SELECT id, punch_in, punch_out FROM attendance WHERE user_id = %s AND work_date = CURDATE()", (user_id,))
             existing = cursor.fetchone()
             if existing:
-                if existing['punch_out'] is not None: return {'status': 'error', 'message': 'Shift completed for today. Cannot punch in again.'}
+                if existing['punch_out'] is not None: 
+                    return {'status': 'error', 'message': 'Shift completed for today. Cannot punch in again.'}
                 return {'status': 'already_punched_in', 'punch_in': existing['punch_in'].strftime('%H:%M:%S')}
             cursor.execute("INSERT INTO attendance (user_id, punch_in, work_date) VALUES (%s, NOW(), CURDATE())", (user_id,))
             db.commit()
@@ -34,8 +41,10 @@ class UserOperation:
             cursor = db.cursor(dictionary=True)
             cursor.execute("SELECT id, punch_in, punch_out FROM attendance WHERE user_id = %s AND work_date = CURDATE()", (user_id,))
             existing = cursor.fetchone()
-            if not existing or not existing['punch_in']: return {'status': 'error', 'message': 'Not punched in.'}
-            if existing['punch_out'] is not None: return {'status': 'error', 'message': 'Already punched out.'}
+            if not existing or not existing['punch_in']: 
+                return {'status': 'error', 'message': 'Not punched in.'}
+            if existing['punch_out'] is not None: 
+                return {'status': 'error', 'message': 'Already punched out.'}
             cursor.execute("UPDATE attendance SET punch_out = NOW(), total_minutes = TIMESTAMPDIFF(MINUTE, punch_in, NOW()) WHERE user_id = %s AND work_date = CURDATE()", (user_id,))
             db.commit()
             cursor.execute("SELECT punch_in, punch_out, total_minutes FROM attendance WHERE user_id = %s AND work_date = CURDATE()", (user_id,))
@@ -65,7 +74,13 @@ class UserOperation:
                 mins = h['total_minutes'] % 60 if h['total_minutes'] else 0
                 h['hours_display'] = f"{hrs}h {mins}m"
             if row:
-                return {'is_punched_in': bool(row['punch_in'] and not row['punch_out']), 'punch_in': row['punch_in'].strftime('%H:%M:%S') if row['punch_in'] else None, 'punch_out': row['punch_out'].strftime('%H:%M:%S') if row['punch_out'] else None, 'total_minutes': row['total_minutes'] or 0, 'history': history}
+                return {
+                    'is_punched_in': bool(row['punch_in'] and not row['punch_out']), 
+                    'punch_in': row['punch_in'].strftime('%H:%M:%S') if row['punch_in'] else None, 
+                    'punch_out': row['punch_out'].strftime('%H:%M:%S') if row['punch_out'] else None, 
+                    'total_minutes': row['total_minutes'] or 0, 
+                    'history': history
+                }
             return {'is_punched_in': False, 'punch_in': None, 'punch_out': None, 'total_minutes': 0, 'history': history}
         except Exception:
             return {'is_punched_in': False, 'punch_in': None, 'punch_out': None, 'total_minutes': 0, 'history': []}
@@ -100,7 +115,10 @@ class UserOperation:
         try:
             db = self.connection()
             cursor = db.cursor()
-            cursor.execute("INSERT INTO leaves (user_id, leave_type, start_date, end_date, reason, leave_days, attachment, status) VALUES (%s, %s, %s, %s, %s, %s, %s, 'pending')", (user_id, leave_type, start_date, end_date, reason, leave_days, attachment_path))
+            cursor.execute("""
+                INSERT INTO leaves (user_id, leave_type, start_date, end_date, reason, leave_days, attachment, status) 
+                VALUES (%s, %s, %s, %s, %s, %s, %s, 'pending')
+            """, (user_id, leave_type, start_date, end_date, reason, leave_days, attachment_path))
             db.commit()
             return {"status": "ok"}
         except Exception as e:
@@ -166,14 +184,10 @@ class UserOperation:
             if action == 'approve_qr': new_status = 'pending_pl'
             elif action == 'approve_pl': new_status = 'approved'
             elif action == 'reject': new_status = 'rejected'
-            else: return {"status": "error", "message": "Invalid action"}
+            else: return {"status": "error", "message": "Invalid operational signature action."}
             
             cursor.execute("UPDATE leaves SET status = %s WHERE id = %s", (new_status, leave_id))
-            
-            cursor.execute("""
-                SELECT l.*, a.username, a.email FROM leaves l 
-                JOIN auth a ON l.user_id = a.id WHERE l.id = %s
-            """, (leave_id,))
+            cursor.execute("SELECT l.*, a.username, a.email FROM leaves l JOIN auth a ON l.user_id = a.id WHERE l.id = %s", (leave_id,))
             leave_data = cursor.fetchone()
             db.commit()
             return {"status": "ok", "new_status": new_status, "leave_data": leave_data}
@@ -227,6 +241,38 @@ class UserOperation:
             return cursor.fetchone() is not None
         except Exception:
             return False
+        finally:
+            if cursor: cursor.close()
+            if db: db.close()
+
+    def get_user_settings(self, user_id):
+        db = cursor = None
+        try:
+            db = self.connection()
+            cursor = db.cursor(dictionary=True)
+            cursor.execute("SELECT theme, notif_email, notif_review, notif_digest FROM auth WHERE id = %s", (user_id,))
+            return cursor.fetchone()
+        except Exception:
+            return {'theme': 'system', 'notif_email': 1, 'notif_review': 1, 'notif_digest': 0}
+        finally:
+            if cursor: cursor.close()
+            if db: db.close()
+
+    def update_user_settings(self, user_id, theme, notif_email, notif_review, notif_digest):
+        db = cursor = None
+        try:
+            db = self.connection()
+            cursor = db.cursor()
+            cursor.execute("""
+                UPDATE auth 
+                SET theme = %s, notif_email = %s, notif_review = %s, notif_digest = %s 
+                WHERE id = %s
+            """, (theme, notif_email, notif_review, notif_digest, user_id))
+            db.commit()
+            return {"status": "ok"}
+        except Exception as e:
+            if db: db.rollback()
+            return {"status": "error", "message": str(e)}
         finally:
             if cursor: cursor.close()
             if db: db.close()
@@ -333,7 +379,7 @@ class UserOperation:
             cursor = db.cursor()
             cursor.execute("SELECT 1 FROM auth WHERE email = %s LIMIT 1", (email,))
             if cursor.fetchone():
-                return {"status": "error", "message": "Email already exists in the system."}
+                return {"status": "error", "message": "Email already exists in the system infrastructure."}
             cursor.execute("INSERT INTO auth (username, email, role, password, is_verified, auth_type) VALUES (%s, %s, %s, '', 1, 'manual')", (username, email, role))
             db.commit()
             return {"status": "ok"}
@@ -358,13 +404,21 @@ class UserOperation:
                     title = row.get('Task Name', '').strip()
                     desc = row.get('Description', '').strip()
                     due_date = row.get('End Date', '').strip()
-                    if not email or not title: continue
+                    if not email or not title: 
+                        continue
                     cursor.execute("SELECT id FROM auth WHERE email = %s", (email,))
                     u = cursor.fetchone()
                     if not u:
                         errors.append(f"User {email} not found")
                         continue
-                    cursor.execute("INSERT INTO tasks (title, description, created_by, assigned_to, status, due_date) VALUES (%s, %s, %s, %s, 'pending', %s)", (title, desc, created_by, u['id'], due_date if due_date else None))
+                    
+                    # CORRECTED: Replaced JavaScript/SQL NULL with Python None
+                    final_due_date = due_date if due_date else None
+                    
+                    cursor.execute("""
+                        INSERT INTO tasks (title, description, created_by, assigned_to, status, due_date) 
+                        VALUES (%s, %s, %s, %s, 'pending', %s)
+                    """, (title, desc, created_by, u['id'], final_due_date))
                     success_count += 1
             db.commit()
             return {"status": "ok", "success": success_count, "errors": errors}
@@ -374,7 +428,7 @@ class UserOperation:
         finally:
             if cursor: cursor.close()
             if db: db.close()
-
+            
     def assign_task(self, title, description, project_id, created_by, assigned_to, priority, due_date):
         db = cursor = None
         try:
@@ -590,38 +644,6 @@ class UserOperation:
             return {'assigned_tasks': assigned_tasks, 'in_progress': in_progress, 'completed': completed, 'overdue': overdue, 'my_tasks': my_tasks, 'all_tasks': all_tasks, 'activity': activity, 'attendance': attendance, 'pl_info': pl_info, 'qr_info': qr_info}
         except Exception:
             return {'assigned_tasks': 0, 'in_progress': 0, 'completed': 0, 'overdue': 0, 'my_tasks': [], 'all_tasks': [], 'activity': [], 'attendance': {'is_punched_in': False, 'punch_in': None, 'punch_out': None, 'total_minutes': 0, 'history': []}, 'pl_info': None, 'qr_info': None}
-        finally:
-            if cursor: cursor.close()
-            if db: db.close()
-    
-    def get_user_settings(self, user_id):
-        db = cursor = None
-        try:
-            db = self.connection()
-            cursor = db.cursor(dictionary=True)
-            cursor.execute("SELECT theme, notif_email, notif_review, notif_digest FROM auth WHERE id = %s", (user_id,))
-            return cursor.fetchone()
-        except Exception:
-            return {'theme': 'system', 'notif_email': 1, 'notif_review': 1, 'notif_digest': 0}
-        finally:
-            if cursor: cursor.close()
-            if db: db.close()
-
-    def update_user_settings(self, user_id, theme, notif_email, notif_review, notif_digest):
-        db = cursor = None
-        try:
-            db = self.connection()
-            cursor = db.cursor()
-            cursor.execute("""
-                UPDATE auth 
-                SET theme = %s, notif_email = %s, notif_review = %s, notif_digest = %s 
-                WHERE id = %s
-            """, (theme, notif_email, notif_review, notif_digest, user_id))
-            db.commit()
-            return {"status": "ok"}
-        except Exception as e:
-            if db: db.rollback()
-            return {"status": "error", "message": str(e)}
         finally:
             if cursor: cursor.close()
             if db: db.close()

@@ -147,7 +147,23 @@ def leave_page():
 def settings_page():
     user = _get_user_data()
     if not user: return redirect(url_for('users.user_login'))
-    return render_template('dashboards/settings.html', user=user)
+    settings = enroll_user_op.get_user_settings(user['id'])
+    return render_template('dashboards/settings.html', user=user, settings=settings)
+
+@users_bp.route('/api/user/settings', methods=['POST'])
+@login_required
+def api_update_user_settings():
+    user = _get_user_data()
+    if not user: return jsonify({"error": "Unauthorized"}), 401
+    data = request.get_json()
+    theme = data.get('theme', 'system')
+    notif_email = 1 if data.get('notif_email') else 0
+    notif_review = 1 if data.get('notif_review') else 0
+    notif_digest = 1 if data.get('notif_digest') else 0
+    result = enroll_user_op.update_user_settings(user['id'], theme, notif_email, notif_review, notif_digest)
+    session['user_theme'] = theme 
+    if result.get("status") == "ok": return jsonify({"status": "ok"})
+    return jsonify({"error": result.get("message", "Failed to save settings")}), 400
 
 @users_bp.route('/api/attendance/punch-in', methods=['POST'])
 @login_required
@@ -208,10 +224,10 @@ def api_leave_action():
             leave_data = result['leave_data']
             if result['new_status'] in ['approved', 'rejected']:
                 msg = Message(subject=f"Leave Request {result['new_status'].title()}", sender=session.get('user_email'), recipients=[leave_data['email']])
-                msg.body = f"Hello {leave_data['username']},\n\nYour leave request for {leave_data['leave_days']} days starting on {leave_data['start_date']} has been {result['new_status']}.\n\nRegards,\nManagement"
+                msg.body = f"Hello {leave_data['username']},\n\nYour leave request for {leave_data['leave_days']} days starting on {leave_data['start_date']} has been {result['new_status']}.\n\nRegards,\nManagement Team"
                 mail.send(msg)
         except Exception as e:
-            logger.error(f"Email failed to send for leave: {e}")
+            logger.error(f"Email orchestration breakdown for leave context notification: {e}")
         return jsonify({"status": "ok"})
     return jsonify({"error": result.get("message", "Error")}), 400
 
@@ -241,7 +257,7 @@ def api_task_review():
     task_id = data.get('task_id')
     decision = data.get('decision')
     note = data.get('note', '')
-    if not task_id or decision not in ('approve', 'reject'): return jsonify({"error": "Invalid"}), 400
+    if not task_id or decision not in ('approve', 'reject'): return jsonify({"error": "Invalid parameters"}), 400
     result = enroll_user_op.review_task(task_id, user['id'], decision, note)
     if result.get("status") == "ok": return jsonify(result)
     return jsonify({"error": result.get("message", "Error")}), 400
@@ -295,12 +311,12 @@ def api_profile_update():
     job_title = data.get('job_title', '').strip()
     current_password = data.get('current_password', '')
     new_password = data.get('new_password', '')
-    if not username or len(username) < 3: return jsonify({"error": "Username short"}), 400
+    if not username or len(username) < 3: return jsonify({"error": "Username too short"}), 400
     new_hash = None
     if new_password:
         if not current_password: return jsonify({"error": "Current password required"}), 400
         if not bcrypt.checkpw(current_password.encode(), user['password'].encode()): return jsonify({"error": "Current password incorrect"}), 400
-        if len(new_password) < 8: return jsonify({"error": "New password short"}), 400
+        if len(new_password) < 8: return jsonify({"error": "New password too short"}), 400
         new_hash = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode()
     result = enroll_user_op.update_profile(user['id'], username, job_title, new_hash)
     if result.get("status") == "ok":
@@ -353,7 +369,7 @@ def api_admin_email():
         mail.send(msg)
         return jsonify({"status": "ok"})
     except Exception as e:
-        logger.error(f"Admin Email Send Error: {e}")
+        logger.error(f"Admin Email Broadcast Fault Context: {e}")
         return jsonify({"error": "Failed to send email"}), 400
 
 @users_bp.route('/api/admin/add_user', methods=['POST'])
@@ -370,34 +386,3 @@ def api_admin_add_user():
     result = enroll_user_op.admin_add_user(username, email, role)
     if result.get("status") == "ok": return jsonify({"status": "ok"})
     return jsonify({"error": result.get("message", "Failed to add user.")}), 400
-
-@users_bp.route('/settings')
-@login_required
-def settings_page():
-    user = _get_user_data()
-    if not user: return redirect(url_for('users.user_login'))
-    
-    # Fetch current settings from database
-    settings = enroll_user_op.get_user_settings(user['id'])
-    return render_template('dashboards/settings.html', user=user, settings=settings)
-
-@users_bp.route('/api/user/settings', methods=['POST'])
-@login_required
-def api_update_user_settings():
-    user = _get_user_data()
-    if not user: return jsonify({"error": "Unauthorized"}), 401
-    
-    data = request.get_json()
-    theme = data.get('theme', 'system')
-    notif_email = 1 if data.get('notif_email') else 0
-    notif_review = 1 if data.get('notif_review') else 0
-    notif_digest = 1 if data.get('notif_digest') else 0
-    
-    result = enroll_user_op.update_user_settings(user['id'], theme, notif_email, notif_review, notif_digest)
-    
-    # Save theme in the session so it loads instantly on refresh
-    session['user_theme'] = theme 
-    
-    if result.get("status") == "ok":
-        return jsonify({"status": "ok"})
-    return jsonify({"error": result.get("message", "Failed to save settings")}), 400
