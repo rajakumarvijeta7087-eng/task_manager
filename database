@@ -1,0 +1,122 @@
+CREATE TABLE IF NOT EXISTS settings (
+    setting_key VARCHAR(50) PRIMARY KEY,
+    setting_value TEXT
+);
+
+CREATE TABLE IF NOT EXISTS whitelist (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    username VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_email (email)
+);
+
+CREATE TABLE IF NOT EXISTS auth (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_code VARCHAR(50) UNIQUE,
+    username VARCHAR(100) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255),
+    role ENUM('admin', 'project_lead', 'quality_reviewer', 'tasker') NOT NULL,
+    job_title VARCHAR(100),
+    is_verified TINYINT(1) DEFAULT 0,
+    last_active DATETIME,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    auth_type VARCHAR(20) DEFAULT 'manual',
+    assigned_pl INT DEFAULT NULL,
+    assigned_qr INT DEFAULT NULL,
+    theme VARCHAR(20) DEFAULT 'system',
+    notif_email TINYINT(1) DEFAULT 1,
+    notif_review TINYINT(1) DEFAULT 1,
+    notif_digest TINYINT(1) DEFAULT 0,
+    FOREIGN KEY (assigned_pl) REFERENCES auth(id) ON DELETE SET NULL,
+    FOREIGN KEY (assigned_qr) REFERENCES auth(id) ON DELETE SET NULL,
+    INDEX idx_email (email),
+    INDEX idx_role (role),
+    INDEX idx_assigned_pl (assigned_pl),
+    INDEX idx_assigned_qr (assigned_qr)
+);
+
+CREATE TABLE IF NOT EXISTS attendance (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    punch_in DATETIME NOT NULL,
+    punch_out DATETIME DEFAULT NULL,
+    work_date DATE NOT NULL,
+    total_minutes INT DEFAULT 0,
+    FOREIGN KEY (user_id) REFERENCES auth(id) ON DELETE CASCADE,
+    INDEX idx_user_date (user_id, work_date),
+    INDEX idx_work_date (work_date)
+);
+
+CREATE TABLE IF NOT EXISTS leaves (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    leave_type VARCHAR(50) NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    leave_days INT DEFAULT 0,
+    reason TEXT NOT NULL,
+    attachment VARCHAR(255) DEFAULT NULL,
+    status ENUM('pending', 'pending_pl', 'approved', 'rejected') DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES auth(id) ON DELETE CASCADE,
+    INDEX idx_user_id (user_id),
+    INDEX idx_status (status)
+);
+
+CREATE TABLE IF NOT EXISTS projects (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_by INT NOT NULL,
+    status ENUM('active', 'completed', 'on_hold') DEFAULT 'active',
+    due_date DATE DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES auth(id) ON DELETE CASCADE,
+    INDEX idx_created_by (created_by),
+    INDEX idx_status (status)
+);
+
+CREATE TABLE IF NOT EXISTS tasks (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    project_id INT DEFAULT NULL,
+    created_by INT NOT NULL,
+    assigned_to INT NOT NULL,
+    status ENUM('pending', 'in_progress', 'submitted', 'approved', 'rejected', 'completed') DEFAULT 'pending',
+    priority ENUM('low', 'medium', 'high', 'critical') DEFAULT 'medium',
+    due_date DATE DEFAULT NULL,
+    start_screenshot LONGTEXT DEFAULT NULL,
+    end_screenshot LONGTEXT DEFAULT NULL,
+    start_time DATETIME DEFAULT NULL,
+    end_time DATETIME DEFAULT NULL,
+    submitted_at DATETIME DEFAULT NULL,
+    reviewed_by INT DEFAULT NULL,
+    reviewed_at DATETIME DEFAULT NULL,
+    review_note TEXT DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES auth(id) ON DELETE CASCADE,
+    FOREIGN KEY (assigned_to) REFERENCES auth(id) ON DELETE CASCADE,
+    FOREIGN KEY (reviewed_by) REFERENCES auth(id) ON DELETE SET NULL,
+    INDEX idx_assigned_to (assigned_to),
+    INDEX idx_created_by (created_by),
+    INDEX idx_project_id (project_id),
+    INDEX idx_status (status),
+    INDEX idx_due_date (due_date)
+);
+
+CREATE TABLE IF NOT EXISTS activity_log (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    action_type VARCHAR(100) NOT NULL,
+    entity_type VARCHAR(50) NOT NULL,
+    entity_id INT NOT NULL,
+    message TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES auth(id) ON DELETE CASCADE,
+    INDEX idx_user_id (user_id),
+    INDEX idx_created_at (created_at)
+);

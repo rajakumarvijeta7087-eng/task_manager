@@ -1,132 +1,259 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Task Manager{% endblock %} — Task Manager</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboards/base.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboards/project_lead.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboards/quality_reviewer.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboards/tasker.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboards/profile.css') }}">
-    
-    {% block extra_css %}{% endblock %}
-</head>
-<body>
-<div class="app-layout">
-    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+{% extends 'dashboards/base.html' %}
+{% block title %}Admin Dashboard{% endblock %}
 
-    <aside class="sidebar" id="sidebar">
-        <div class="sidebar-logo">
-            <div class="logo-icon-box">✅</div>
-            <div>Task Manager</div>
+{% block extra_css %}
+<style>
+    .admin-section { display: none; }
+    .admin-section.active { display: block; }
+    .admin-tabs { display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--border); overflow-x: auto; padding-bottom: 4px; }
+    .admin-tab { padding: 12px 20px; cursor: pointer; font-weight: 600; font-size: 14px; color: var(--text-muted); border-bottom: 2px solid transparent; transition: all 0.2s ease; white-space: nowrap; }
+    .admin-tab:hover { color: var(--text); }
+    .admin-tab.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
+    .email-workspace { display: grid; grid-template-columns: 280px 1fr; gap: 24px; align-items: start; }
+    .template-selector-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+    .template-option { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 10px; cursor: pointer; transition: all 0.2s ease; font-size: 13px; font-weight: 500; }
+    .template-option:hover { border-color: var(--primary); background: rgba(var(--primary-rgb), 0.05); }
+    .template-option i { font-size: 16px; color: var(--text-muted); }
+    .template-option.active { border-color: var(--primary); background: rgba(var(--primary-rgb), 0.1); color: var(--primary); }
+    .template-option.active i { color: var(--primary); }
+    .meta-input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .email-editor-container { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
+    .email-editor-header { background: var(--surface2); border-bottom: 1px solid var(--border); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; }
+    .email-preview-badge { font-size: 11px; background: var(--border); padding: 4px 8px; border-radius: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+    <div class="dashboard-header">
+        <div class="header-left">
+            <span class="role-chip" style="background:#ef4444; color:#fff;">👑 System Admin</span>
+            <h1 class="dash-title">Admin Console</h1>
+            <p class="dash-subtitle">ID: {{ user.user_code }}</p>
         </div>
+    </div>
 
-        <div class="sidebar-user">
-            <div class="user-avatar">{{ session.get('user_username', 'U')[0].upper() }}</div>
-            <div class="user-info">
-                <div class="user-name">{{ session.get('user_username', 'User') }}</div>
-                <div class="user-role">{{ session.get('user_role', 'User') | replace('_', ' ') | title }}</div>
-            </div>
+    <div class="stats-grid mb-24">
+        <div class="stat-card">
+            <div class="stat-value">{{ dashboard.users_count }}</div>
+            <div class="stat-label">Total Users</div>
         </div>
-
-        <nav class="sidebar-nav">
-            {% set role = session.get('user_role', '') %}
-            {% set code = session.get('user_code', '') %}
-            <div class="nav-section-label">Main Menu</div>
-
-            {% if role == 'admin' %}
-            <a href="{{ url_for('users.dashboard_admin', user_code=code) }}" class="nav-item {% if request.endpoint == 'users.dashboard_admin' %}active{% endif %}">
-                <i class="fas fa-shield-alt"></i> Admin Console
-            </a>
-            {% elif role == 'project_lead' %}
-            <a href="{{ url_for('users.dashboard_project_lead', user_code=code) }}" class="nav-item {% if request.endpoint == 'users.dashboard_project_lead' %}active{% endif %}">
-                <i class="fas fa-chart-pie"></i> Dashboard
-            </a>
-            {% elif role == 'quality_reviewer' %}
-            <a href="{{ url_for('users.dashboard_quality_reviewer', user_code=code) }}" class="nav-item {% if request.endpoint == 'users.dashboard_quality_reviewer' %}active{% endif %}">
-                <i class="fas fa-chart-pie"></i> Dashboard
-            </a>
-            {% elif role == 'tasker' %}
-            <a href="{{ url_for('users.dashboard_tasker', user_code=code) }}" class="nav-item {% if request.endpoint == 'users.dashboard_tasker' %}active{% endif %}">
-                <i class="fas fa-chart-pie"></i> Dashboard
-            </a>
-            {% endif %}
-
-            <a href="{{ url_for('users.tasks_page') }}" class="nav-item {% if request.endpoint == 'users.tasks_page' %}active{% endif %}"><i class="fas fa-tasks"></i> Tasks</a>
-            <a href="{{ url_for('users.attendance_page') }}" class="nav-item {% if request.endpoint == 'users.attendance_page' %}active{% endif %}"><i class="fas fa-clock"></i> Attendance</a>
-            <a href="{{ url_for('users.leave_page') }}" class="nav-item {% if request.endpoint == 'users.leave_page' %}active{% endif %}"><i class="fas fa-calendar-times"></i> Leave</a>
-
-            <div class="nav-section-label" style="margin-top:10px;">Personal</div>
-            <a href="{{ url_for('users.profile') }}" class="nav-item {% if request.endpoint == 'users.profile' %}active{% endif %}">
-                <i class="fas fa-user-circle"></i> Profile
-            </a>
-            <a href="{{ url_for('users.settings_page') }}" class="nav-item {% if request.endpoint == 'users.settings_page' %}active{% endif %}"><i class="fas fa-cog"></i> Settings</a>
-        </nav>
-
-        <div class="sidebar-footer">
-            <a href="{{ url_for('users.user_logout') }}" class="nav-item logout-link">
-                <i class="fas fa-right-from-bracket"></i> Sign Out
-            </a>
+        <div class="stat-card">
+            <div class="stat-value">{{ dashboard.tasks_count }}</div>
+            <div class="stat-label">Total Tasks</div>
         </div>
-    </aside>
+    </div>
 
-    <div class="main-content">
-        <header class="topbar">
-            <button class="topbar-toggle" id="sidebarToggle">
-                <i class="fas fa-bars"></i>
-            </button>
-            <div class="topbar-breadcrumb">
-                <span class="breadcrumb-text">{% block breadcrumb %}Dashboard{% endblock %}</span>
-            </div>
-            <div class="topbar-right">
-                <span id="liveStatusPing" class="live-status-ping"></span>
-                <a href="{{ url_for('users.profile') }}" class="topbar-avatar" title="{{ session.get('user_username', '') }}">
-                    {{ session.get('user_username', 'U')[0].upper() }}
-                </a>
-            </div>
-        </header>
+    <div class="admin-tabs">
+        <div class="admin-tab active" data-target="sec-pl"><i class="fas fa-user-tie mr-6"></i> Project Leads</div>
+        <div class="admin-tab" data-target="sec-qr"><i class="fas fa-user-check mr-6"></i> Quality Reviewers</div>
+        <div class="admin-tab" data-target="sec-tk"><i class="fas fa-users mr-6"></i> Taskers</div>
+        <div class="admin-tab" data-target="sec-add"><i class="fas fa-user-plus mr-6"></i> Quick Add</div>
+        <div class="admin-tab" data-target="sec-mail"><i class="fas fa-paper-plane mr-6"></i> Email Tools</div>
+        <div class="admin-tab" data-target="sec-settings"><i class="fas fa-sliders mr-6"></i> Settings</div>
+    </div>
 
-        <main class="page-body">
-            <div class="flash-container">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                    <div class="flash {{ category }}">
-                        <i class="fas {% if 'error' in category %}fa-circle-xmark{% elif 'success' in category %}fa-circle-check{% else %}fa-circle-info{% endif %}"></i>
-                        <span>{{ message }}</span>
-                    </div>
+    <div id="sec-pl" class="admin-section active dash-card">
+        <div class="card-header"><span class="card-title">Project Leads Management</span></div>
+        <div class="card-body" style="padding: 0;">
+            <table class="dash-table" style="margin: 0; width: 100%;">
+                <thead><tr><th>Name</th><th>Email</th><th>Live Status</th><th>Action</th></tr></thead>
+                <tbody>
+                    {% for u in dashboard.pl_users %}
+                    <tr>
+                        <td><strong>{{ u.username }}</strong></td>
+                        <td>{{ u.email }}</td>
+                        <td>{% if u.is_live %}<span style="color:var(--success); font-weight:600;">● Live</span>{% else %}<span class="text-muted">Offline</span>{% endif %}</td>
+                        <td>
+                            <button class="btn btn-action btn-secondary btn-del-user text-error border-error" data-id="{{ u.id }}">Delete</button>
+                        </td>
+                    </tr>
                     {% endfor %}
-                {% endif %}
-            {% endwith %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="sec-qr" class="admin-section dash-card">
+        <div class="card-header"><span class="card-title">Quality Reviewers Management</span></div>
+        <div class="card-body" style="padding: 0;">
+            <table class="dash-table" style="margin: 0; width: 100%;">
+                <thead><tr><th>Name</th><th>Email</th><th>Live Status</th><th>Action</th></tr></thead>
+                <tbody>
+                    {% for u in dashboard.qr_users %}
+                    <tr>
+                        <td><strong>{{ u.username }}</strong></td>
+                        <td>{{ u.email }}</td>
+                        <td>{% if u.is_live %}<span style="color:var(--success); font-weight:600;">● Live</span>{% else %}<span class="text-muted">Offline</span>{% endif %}</td>
+                        <td>
+                            <button class="btn btn-action btn-secondary btn-del-user text-error border-error" data-id="{{ u.id }}">Delete</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="sec-tk" class="admin-section dash-card">
+        <div class="card-header"><span class="card-title">Taskers Management</span></div>
+        <div class="card-body" style="padding: 0;">
+            <table class="dash-table" style="margin: 0; width: 100%;">
+                <thead><tr><th>Name</th><th>Email</th><th>Live Status</th><th>Action</th></tr></thead>
+                <tbody>
+                    {% for u in dashboard.tk_users %}
+                    <tr>
+                        <td><strong>{{ u.username }}</strong></td>
+                        <td>{{ u.email }}</td>
+                        <td>{% if u.is_live %}<span style="color:var(--success); font-weight:600;">● Live</span>{% else %}<span class="text-muted">Offline</span>{% endif %}</td>
+                        <td>
+                            <button class="btn btn-action btn-secondary btn-del-user text-error border-error" data-id="{{ u.id }}">Delete</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="sec-add" class="admin-section dash-card">
+        <div class="card-header"><span class="card-title">Quick Onboard Shell Account</span></div>
+        <div class="card-body">
+            <p class="text-muted mb-16 text-12">Create an optimized user identity entry without assigning passwords. Passwords will be handled passwordlessly upon initial login.</p>
+            <div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" id="quickAddName" placeholder="John Doe"></div>
+            <div class="form-group"><label class="form-label">Email Address</label><input type="email" class="form-input" id="quickAddEmail" placeholder="john@company.com"></div>
+            <div class="form-group">
+                <label class="form-label">Role Profile</label>
+                <select class="form-select" id="quickAddRole">
+                    <option value="tasker">Tasker</option>
+                    <option value="quality_reviewer">Quality Reviewer</option>
+                    <option value="project_lead">Project Lead</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" id="btnQuickAddUser" style="width: 100%;">Create User</button>
+        </div>
+    </div>
+
+    <div id="sec-mail" class="admin-section">
+        <div class="email-workspace">
+            
+            <div class="template-selector-card">
+                <h4 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600;">Email Blueprints</h4>
+                <p class="text-muted text-11 mb-16">Select a premade messaging module framework to pre-fill the layout canvas.</p>
+                
+                <div class="template-option active" data-type="custom">
+                    <i class="fas fa-pen-nib"></i>
+                    <span>Custom Broadcaster</span>
+                </div>
+                <div class="template-option" data-type="assignment">
+                    <i class="fas fa-clipboard-list"></i>
+                    <span>Task Assignment Notice</span>
+                </div>
+                <div class="template-option" data-type="review">
+                    <i class="fas fa-star-half-alt"></i>
+                    <span>Performance Review</span>
+                </div>
+                <div class="template-option" data-type="alert">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>System Critical Alert</span>
+                </div>
             </div>
 
-            {% block content %}{% endblock %}
-        </main>
+            <div class="dash-card" style="margin: 0;">
+                <div class="card-header"><span class="card-title">Professional Email Hub</span></div>
+                <div class="card-body">
+                    
+                    <div class="meta-input-row">
+                        <div class="form-group">
+                            <label class="form-label">Recipient Address</label>
+                            <input type="email" class="form-input" id="mailTo" placeholder="recipient@domain.com">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Subject Headline</label>
+                            <input type="text" class="form-input" id="mailSub" placeholder="Enter formal subject title...">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Message Payload Box</label>
+                        <div class="email-editor-container">
+                            <div class="email-editor-header">
+                                <span style="font-size: 12px; font-weight: 500; color: var(--text-muted);">Plain-Text Formatting Layout Block</span>
+                                <span class="email-preview-badge">Active Sandbox</span>
+                            </div>
+                            <textarea class="form-textarea" id="mailBody" rows="10" style="border: none; border-radius: 0; padding: 16px; font-family: var(--font-mono); font-size: 13px; line-height: 1.6;" placeholder="Compose clear body statements here..."></textarea>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary" id="btnSendMail" style="width: 100%; height: 44px; font-size: 14px; font-weight: 600;">
+                        <i class="fas fa-paper-plane mr-6"></i> Broadcast Email Template
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="sec-settings" class="admin-section dash-card">
+        <div class="card-header"><span class="card-title">Security & System Governance Settings</span></div>
+        <div class="card-body">
+            <div class="form-group">
+                <label class="form-label">Allowed Email Domains (comma separated)</label>
+                <input type="text" class="form-input" id="adminDomains" value="{{ dashboard.settings.get('allowed_domains', '') }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Whitelist Mode Enforcement</label>
+                <select class="form-select" id="adminWlMode">
+                    <option value="off" {% if dashboard.settings.get('whitelist_mode')=='off' %}selected{% endif %}>Off (Open Signup via Domain)</option>
+                    <option value="on" {% if dashboard.settings.get('whitelist_mode')=='on' %}selected{% endif %}>On (Only Whitelisted Emails)</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" id="btnSaveSettings">Save Settings</button>
+            <hr style="margin:20px 0; border:none; border-top:1px solid var(--border);">
+            <label class="form-label">Upload Whitelist CSV (Email, Name)</label>
+            <input type="file" id="wlFile" class="form-input" accept=".csv">
+            <button class="btn btn-secondary mt-12" id="btnUploadWl">Upload Whitelist</button>
+        </div>
     </div>
 </div>
+{% endblock %}
 
-<script src="{{ url_for('static', filename='js/dashboards/base.js') }}"></script>
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/dashboards/admin.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const templates = {
+        custom: {
+            subject: "",
+            body: ""
+        },
+        assignment: {
+            subject: "Notification: New Operational Project Assignment Block",
+            body: "Hello,\n\nA new execution sprint component has been registered under your operational directory workflow.\n\nPlease log in immediately to your dashboard workspace block to access project specifications, priority timelines, and mandatory attachment parameters.\n\nBest regards,\nOperational Governance Management"
+        },
+        review: {
+            subject: "Performance Review Matrix Assessment Notice",
+            body: "Hello,\n\nYour production execution performance metrics have been thoroughly analyzed across recent operational task reviews.\n\nPlease schedule a performance feedback review mapping segment with your associated Project Lead directly.\n\nBest regards,\nSystem Integrity Auditing Unit"
+        },
+        alert: {
+            subject: "CRITICAL: Mandatory System Infrastructure Update Notice",
+            body: "Urgent Warning Notice,\n\nOur underlying cloud database environment clusters will undergo short maintenance optimization scripts shortly.\n\nPlease confirm all production assets, local screenshots, and task logs are accurately synced to remote storage targets right now.\n\nBest regards,\nSystem Core Engineering Team"
+        }
+    };
 
-{% set role = session.get('user_role', '') %}
-{% if role == 'project_lead' %}
-    <script src="{{ url_for('static', filename='js/dashboards/project_lead.js') }}"></script>
-{% elif role == 'quality_reviewer' %}
-    <script src="{{ url_for('static', filename='js/dashboards/quality_lead.js') }}"></script>
-{% elif role == 'tasker' %}
-    <script src="{{ url_for('static', filename='js/dashboards/tasker.js') }}"></script>
-{% elif role == 'admin' %}
-    <script src="{{ url_for('static', filename='js/dashboards/admin.js') }}"></script>
-{% endif %}
+    document.querySelectorAll('.template-option').forEach(opt => {
+        opt.addEventListener('click', (e) => {
+            const element = e.currentTarget;
+            document.querySelectorAll('.template-option').forEach(t => t.classList.remove('active'));
+            element.classList.add('active');
 
-<script src="{{ url_for('static', filename='js/dashboards/profile.js') }}"></script>
-
-{% block extra_js %}{% endblock %}
-</body>
-</html>
+            const type = element.getAttribute('data-type');
+            if(templates[type]) {
+                document.getElementById('mailSub').value = templates[type].subject;
+                document.getElementById('mailBody').value = templates[type].body;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

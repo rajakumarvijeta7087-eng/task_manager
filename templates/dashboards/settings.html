@@ -17,7 +17,7 @@
                     <div style="font-weight: 600; font-size: 14px;">Email Notifications</div>
                     <div style="font-size: 12px; color: var(--text-muted);">Receive emails when a new task is assigned to you.</div>
                 </div>
-                <input type="checkbox" checked style="width: 18px; height: 18px; cursor: pointer;">
+                <input type="checkbox" id="chkEmail" {% if settings.notif_email %}checked{% endif %} style="width: 18px; height: 18px; cursor: pointer;">
             </div>
             
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border);">
@@ -25,7 +25,7 @@
                     <div style="font-weight: 600; font-size: 14px;">Review Updates</div>
                     <div style="font-size: 12px; color: var(--text-muted);">Get notified when your task is approved or rejected.</div>
                 </div>
-                <input type="checkbox" checked style="width: 18px; height: 18px; cursor: pointer;">
+                <input type="checkbox" id="chkReview" {% if settings.notif_review %}checked{% endif %} style="width: 18px; height: 18px; cursor: pointer;">
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0;">
@@ -33,7 +33,7 @@
                     <div style="font-weight: 600; font-size: 14px;">Daily Digest</div>
                     <div style="font-size: 12px; color: var(--text-muted);">Receive a summary of pending tasks every morning.</div>
                 </div>
-                <input type="checkbox" style="width: 18px; height: 18px; cursor: pointer;">
+                <input type="checkbox" id="chkDigest" {% if settings.notif_digest %}checked{% endif %} style="width: 18px; height: 18px; cursor: pointer;">
             </div>
         </div>
     </div>
@@ -43,14 +43,69 @@
         <div class="card-body">
             <div class="form-group">
                 <label class="form-label">Theme Preference</label>
-                <select class="form-select" style="max-width: 300px;">
-                    <option value="system">System Default</option>
-                    <option value="light">Light Mode</option>
-                    <option value="dark">Dark Mode</option>
+                <select class="form-select" id="themeSelect" style="max-width: 300px;">
+                    <option value="system" {% if settings.theme == 'system' %}selected{% endif %}>System Default</option>
+                    <option value="light" {% if settings.theme == 'light' %}selected{% endif %}>Light Mode</option>
+                    <option value="dark" {% if settings.theme == 'dark' %}selected{% endif %}>Dark Mode</option>
                 </select>
             </div>
-            <button class="btn btn-primary mt-12">Save Preferences</button>
+            <button class="btn btn-primary mt-12" id="btnSaveSettings">Save Preferences</button>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    
+    // 1. Live Theme Switcher Logic (Immediate Visual Feedback)
+    document.getElementById('themeSelect').addEventListener('change', (e) => {
+        const theme = e.target.value;
+        if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark-mode');
+        } else {
+            document.documentElement.classList.remove('dark-mode');
+        }
+    });
+
+    // 2. Save Settings to Database
+    document.getElementById('btnSaveSettings').addEventListener('click', async (e) => {
+        const btn = e.target;
+        btn.disabled = true;
+        btn.innerHTML = 'Saving... <i class="fas fa-spinner fa-spin"></i>';
+
+        const payload = {
+            theme: document.getElementById('themeSelect').value,
+            notif_email: document.getElementById('chkEmail').checked,
+            notif_review: document.getElementById('chkReview').checked,
+            notif_digest: document.getElementById('chkDigest').checked
+        };
+
+        try {
+            const res = await fetch('/api/user/settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify(payload)
+            });
+            
+            const data = await res.json();
+            
+            if (res.ok) {
+                alert('Preferences saved successfully!');
+            } else {
+                alert('Error: ' + (data.error || 'Failed to save settings.'));
+            }
+        } catch(err) {
+            alert('Network error while saving settings.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'Save Preferences';
+        }
+    });
+});
+</script>
 {% endblock %}

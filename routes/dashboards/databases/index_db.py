@@ -593,3 +593,35 @@ class UserOperation:
         finally:
             if cursor: cursor.close()
             if db: db.close()
+    
+    def get_user_settings(self, user_id):
+        db = cursor = None
+        try:
+            db = self.connection()
+            cursor = db.cursor(dictionary=True)
+            cursor.execute("SELECT theme, notif_email, notif_review, notif_digest FROM auth WHERE id = %s", (user_id,))
+            return cursor.fetchone()
+        except Exception:
+            return {'theme': 'system', 'notif_email': 1, 'notif_review': 1, 'notif_digest': 0}
+        finally:
+            if cursor: cursor.close()
+            if db: db.close()
+
+    def update_user_settings(self, user_id, theme, notif_email, notif_review, notif_digest):
+        db = cursor = None
+        try:
+            db = self.connection()
+            cursor = db.cursor()
+            cursor.execute("""
+                UPDATE auth 
+                SET theme = %s, notif_email = %s, notif_review = %s, notif_digest = %s 
+                WHERE id = %s
+            """, (theme, notif_email, notif_review, notif_digest, user_id))
+            db.commit()
+            return {"status": "ok"}
+        except Exception as e:
+            if db: db.rollback()
+            return {"status": "error", "message": str(e)}
+        finally:
+            if cursor: cursor.close()
+            if db: db.close()

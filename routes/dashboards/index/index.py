@@ -370,3 +370,34 @@ def api_admin_add_user():
     result = enroll_user_op.admin_add_user(username, email, role)
     if result.get("status") == "ok": return jsonify({"status": "ok"})
     return jsonify({"error": result.get("message", "Failed to add user.")}), 400
+
+@users_bp.route('/settings')
+@login_required
+def settings_page():
+    user = _get_user_data()
+    if not user: return redirect(url_for('users.user_login'))
+    
+    # Fetch current settings from database
+    settings = enroll_user_op.get_user_settings(user['id'])
+    return render_template('dashboards/settings.html', user=user, settings=settings)
+
+@users_bp.route('/api/user/settings', methods=['POST'])
+@login_required
+def api_update_user_settings():
+    user = _get_user_data()
+    if not user: return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.get_json()
+    theme = data.get('theme', 'system')
+    notif_email = 1 if data.get('notif_email') else 0
+    notif_review = 1 if data.get('notif_review') else 0
+    notif_digest = 1 if data.get('notif_digest') else 0
+    
+    result = enroll_user_op.update_user_settings(user['id'], theme, notif_email, notif_review, notif_digest)
+    
+    # Save theme in the session so it loads instantly on refresh
+    session['user_theme'] = theme 
+    
+    if result.get("status") == "ok":
+        return jsonify({"status": "ok"})
+    return jsonify({"error": result.get("message", "Failed to save settings")}), 400

@@ -199,6 +199,7 @@ def admin_login():
                     flash("Unauthorized. Admin privileges required.", 'error')
                     return redirect(url_for('users.admin_login'))
 
+                # First Time Setup detection
                 if not user.get('password') or user.get('password') == '':
                     otp_val = generate_otp()
                     session['admin_setup_pending'] = {
@@ -227,6 +228,7 @@ def admin_login():
                     session.pop('admin_login_step', None)
                     return redirect(url_for('users.admin_login'))
                     
+                # Verifying password and directly logging in the admin
                 if verify_password(password, user['password']):
                     user_code = user.get('user_code')
                     if not user_code:
@@ -234,16 +236,18 @@ def admin_login():
                         user_code = f"AD-{chars}"
                         auth_db.update_user_code(email, user_code)
 
-                    otp_val = generate_otp()
-                    session['admin_2fa_pending'] = {
-                        'email': user['email'], 'username': user['username'], 'role': 'admin', 'user_code': user_code
-                    }
-                    send_signup_email_otp(user['username'], user['email'], otp_val, mail)
+                    if hasattr(session, 'regenerate'): session.regenerate()
+                    session['user_username'] = user['username']
+                    session['user_email'] = user['email']
+                    session['user_role'] = user.get('role', 'admin')
+                    session['user_code'] = user_code
                     
                     reset_user_login_attempts()
                     session.pop('admin_login_step', None)
                     session.pop('admin_email_pending', None)
-                    return render_template("auth/admin_otp.html", email=user['email'])
+                    
+                    flash("Login successful! Welcome to the Admin Console.", 'success')
+                    return redirect(url_for('users.dashboard_admin', user_code=user_code))
                 else:
                     increment_user_login_attempts()
                     flash("Invalid password.", 'error')
@@ -299,29 +303,6 @@ def admin_login():
         return render_template("auth/admin_login.html", step=step)
     except Exception:
         return render_template("auth/error.html", error_message="Unable to process admin login.")
-
-@users_bp.route("/admin_login_verify", methods=['POST'])
-def admin_login_verify():
-    pending = session.get('admin_2fa_pending')
-    if not pending:
-        return redirect(url_for('users.admin_login'))
-        
-    user_otp = request.form.get('otp', '').strip()
-    from routes.auth.utils.utils_signup import validate_otp
-    is_valid, msg = validate_otp(user_otp)
-    
-    if is_valid:
-        if hasattr(session, 'regenerate'): session.regenerate()
-        session['user_username'] = pending['username']
-        session['user_email'] = pending['email']
-        session['user_role'] = pending['role']
-        session['user_code'] = pending['user_code']
-        session.pop('admin_2fa_pending', None)
-        flash("Admin verification successful.", 'success')
-        return redirect(url_for('users.dashboard_admin', user_code=pending['user_code']))
-    else:
-        flash(msg, 'error')
-        return render_template("auth/admin_otp.html", email=pending['email'])
 
 @users_bp.route('/user_logout')
 def user_logout():
